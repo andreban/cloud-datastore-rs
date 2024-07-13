@@ -13,11 +13,10 @@ use cloud_datastore_rs::google::datastore::{
 use tonic::{
     metadata::MetadataValue,
     service::interceptor::InterceptedService,
-    transport::{Certificate, Channel, ClientTlsConfig},
+    transport::{Channel, ClientTlsConfig},
     Request, Status,
 };
 
-const CERTS: &str = include_str!("../roots.pem");
 const AUTH_SCOPE: &[&str] = &["https://www.googleapis.com/auth/cloud-platform"];
 
 #[tokio::main]
@@ -34,7 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let http_endpoint = format!("https://{domain_name}");
 
     let tls_config = ClientTlsConfig::new()
-        .ca_certificate(Certificate::from_pem(CERTS))
+        .with_native_roots()
         .domain_name(domain_name);
 
     let channel = Channel::from_shared(http_endpoint)?

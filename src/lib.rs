@@ -12,11 +12,10 @@ use google::datastore::v1::{
 use tonic::{
     metadata::MetadataValue,
     service::{interceptor::InterceptedService, Interceptor},
-    transport::{Certificate, Channel, ClientTlsConfig},
+    transport::{Channel, ClientTlsConfig},
     Request, Status,
 };
 
-const CERTS: &str = include_str!("../roots.pem");
 const AUTH_SCOPE: &[&str] = &["https://www.googleapis.com/auth/cloud-platform"];
 const DOMAIN_NAME: &str = "datastore.googleapis.com";
 const HTTP_ENDPOINT: &str = "https://datastore.googleapis.com";
@@ -99,7 +98,7 @@ impl Datastore {
         token_provider: Arc<dyn TokenProvider>,
     ) -> Result<Self, Box<dyn Error>> {
         let tls_config = ClientTlsConfig::new()
-            .ca_certificate(Certificate::from_pem(CERTS))
+            .with_native_roots()
             .domain_name(DOMAIN_NAME);
 
         let channel = Channel::from_shared(HTTP_ENDPOINT)?
