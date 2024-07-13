@@ -48,6 +48,7 @@ pub trait TryFromEntity: Sized {
     fn try_from_entity(entity: Entity) -> Result<Self, TryFromEntityError>;
 }
 
+#[derive(Clone)]
 struct TokenInterceptor {
     token_provider: Arc<dyn TokenProvider>,
 }
@@ -83,6 +84,7 @@ impl Interceptor for TokenInterceptor {
 ///
 /// Wrapper around the Datastore API.
 ///
+#[derive(Clone, Debug)]
 pub struct Datastore {
     project_id: String,
     service: DatastoreClient<InterceptedService<Channel, TokenInterceptor>>,
