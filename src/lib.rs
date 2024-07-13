@@ -17,7 +17,6 @@ use tonic::{
 };
 
 const AUTH_SCOPE: &[&str] = &["https://www.googleapis.com/auth/cloud-platform"];
-const DOMAIN_NAME: &str = "datastore.googleapis.com";
 const HTTP_ENDPOINT: &str = "https://datastore.googleapis.com";
 
 pub mod google {
@@ -97,9 +96,7 @@ impl Datastore {
         project_id: String,
         token_provider: Arc<dyn TokenProvider>,
     ) -> Result<Self, Box<dyn Error>> {
-        let tls_config = ClientTlsConfig::new()
-            .with_native_roots()
-            .domain_name(DOMAIN_NAME);
+        let tls_config = ClientTlsConfig::new().with_native_roots();
 
         let channel = Channel::from_shared(HTTP_ENDPOINT)?
             .tls_config(tls_config)?

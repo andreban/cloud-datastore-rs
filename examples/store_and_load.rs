@@ -29,13 +29,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let bearer_token = format!("Bearer {}", token.as_str());
     let header_value: MetadataValue<_> = bearer_token.parse()?;
 
-    let domain_name = format!("datastore.googleapis.com");
-    let http_endpoint = format!("https://{domain_name}");
-
-    let tls_config = ClientTlsConfig::new()
-        .with_native_roots()
-        .domain_name(domain_name);
-
+    let http_endpoint = format!("https://datastore.googleapis.com");
+    let tls_config = ClientTlsConfig::new().with_native_roots();
     let channel = Channel::from_shared(http_endpoint)?
         .tls_config(tls_config)?
         .connect()
