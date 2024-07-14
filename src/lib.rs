@@ -6,8 +6,12 @@ use std::{
 
 use gcp_auth::{Token, TokenProvider};
 use google::datastore::v1::{
-    commit_request::Mode, datastore_client::DatastoreClient, mutation::Operation, CommitRequest,
-    CommitResponse, Entity, Key, Mutation,
+    commit_request::Mode,
+    datastore_client::DatastoreClient,
+    key::{path_element::IdType, PathElement},
+    mutation::Operation,
+    value::ValueType,
+    ArrayValue, CommitRequest, CommitResponse, Entity, Key, Mutation, Value,
 };
 use tonic::{
     metadata::MetadataValue,
@@ -34,11 +38,28 @@ pub mod google {
 }
 
 #[derive(Debug)]
-pub struct TryFromEntityError;
+pub enum TryFromEntityError {
+    KeyError(KeyError),
+    EntityValueError(EntityValueError),
+    Other(String),
+}
+
 impl Error for TryFromEntityError {}
 impl Display for TryFromEntityError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Failed to convert entity to struct")
+    }
+}
+
+impl From<KeyError> for TryFromEntityError {
+    fn from(e: KeyError) -> Self {
+        TryFromEntityError::KeyError(e)
+    }
+}
+
+impl From<EntityValueError> for TryFromEntityError {
+    fn from(e: EntityValueError) -> Self {
+        TryFromEntityError::EntityValueError(e)
     }
 }
 
@@ -162,6 +183,170 @@ impl Datastore {
             Ok(Some(entity)) => Ok(Some(entity)),
             Ok(None) => Ok(None),
             Err(e) => Err(Box::new(e)),
+        }
+    }
+}
+
+/// Builder for creating an entity.
+pub struct EntityBuilder {
+    entity: Entity,
+}
+
+impl EntityBuilder {
+    pub fn new() -> Self {
+        EntityBuilder {
+            entity: Default::default(),
+        }
+    }
+
+    /// Set the key of the entity.
+    pub fn with_key_name<T: Into<String>>(self, kind: T, name: T) -> Self {
+        let key = Key {
+            path: vec![PathElement {
+                kind: kind.into(),
+                id_type: Some(IdType::Name(name.into())),
+            }],
+            ..Default::default()
+        };
+        self.with_key(key)
+    }
+
+    /// Set the key of the entity.
+    pub fn with_key(mut self, key: Key) -> Self {
+        self.entity.key = Some(key);
+        self
+    }
+
+    /// Add a string property to the entity.
+    pub fn add_string<T: Into<String>>(self, name: T, value: T) -> Self {
+        self.opt_string(name, Some(value))
+    }
+
+    /// Add an optional string property to the entity.
+    pub fn opt_string<T: Into<String>>(mut self, name: T, value: Option<T>) -> Self {
+        self.entity.properties.insert(
+            name.into(),
+            Value {
+                value_type: value.map(|value| ValueType::StringValue(value.into())),
+                ..Default::default()
+            },
+        );
+        self
+    }
+
+    /// Add an integer property to the entity.
+    pub fn add_string_array<T: Into<String>>(mut self, name: T, values: Vec<String>) -> Self {
+        self.entity.properties.insert(
+            name.into(),
+            Value {
+                value_type: Some(ValueType::ArrayValue(ArrayValue {
+                    values: values
+                        .into_iter()
+                        .map(|v| {
+                            let v: String = v.into();
+                            Value {
+                                value_type: Some(ValueType::StringValue(v)),
+                                ..Default::default()
+                            }
+                        })
+                        .collect(),
+                })),
+                ..Default::default()
+            },
+        );
+        self
+    }
+
+    /// Builds the entity.
+    pub fn build(self) -> Entity {
+        self.entity
+    }
+}
+
+#[derive(Debug)]
+pub struct EntityValueError(String);
+impl Error for EntityValueError {}
+impl Display for EntityValueError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Entity {
+    pub fn builder() -> EntityBuilder {
+        EntityBuilder::new()
+    }
+
+    pub fn req_key(&self, kind: &str) -> Result<&Key, EntityValueError> {
+        let key = self
+            .key
+            .as_ref()
+            .ok_or(EntityValueError(format!("Missing Key")))?;
+
+        let key_kind = key.kind().map_err(|e| EntityValueError(e.to_string()))?;
+
+        if key_kind == kind {
+            Ok(key)
+        } else {
+            return Err(EntityValueError(format!(
+                "Invalid Key Kind. Expected '{}'.",
+                kind,
+            )));
+        }
+    }
+
+    pub fn req_string(&self, name: &str) -> Result<String, EntityValueError> {
+        self.opt_string(name)
+            .and_then(|v| v.ok_or(EntityValueError("missing required field".to_string())))
+    }
+
+    pub fn opt_string(&self, name: &str) -> Result<Option<String>, EntityValueError> {
+        let value_type = self.properties.get(name).and_then(|v| v.value_type.clone());
+
+        let Some(value_type) = value_type else {
+            return Ok(None);
+        };
+
+        match value_type {
+            ValueType::StringValue(s) => Ok(Some(s.clone())),
+            _ => Err(EntityValueError(format!("Field {} is not a string", name))),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct KeyError(String);
+
+impl Error for KeyError {}
+
+impl Display for KeyError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Key {
+    pub fn kind(&self) -> Result<&str, KeyError> {
+        if self.path.is_empty() {
+            return Err(KeyError("Key has no path".to_string()));
+        }
+
+        Ok(&self.path[0].kind)
+    }
+
+    pub fn name(&self) -> Result<&str, KeyError> {
+        if self.path.is_empty() {
+            return Err(KeyError("Key has no path".to_string()));
+        }
+
+        let id_type = self.path[0]
+            .id_type
+            .as_ref()
+            .ok_or(KeyError("Key has no name".to_string()))?;
+
+        match id_type {
+            IdType::Name(name) => Ok(name),
+            _ => Err(KeyError("Key has no name".to_string())),
         }
     }
 }

@@ -1,10 +1,9 @@
-use std::{collections::HashMap, error::Error};
+use std::error::Error;
 
 use cloud_datastore_rs::{
     google::datastore::v1::{
         key::{path_element::IdType, PathElement},
-        value::ValueType,
-        Entity, Key, Value,
+        Entity, Key,
     },
     Datastore, TryFromEntity, TryFromEntityError,
 };
@@ -31,57 +30,18 @@ struct Book {
 
 impl TryFromEntity for Book {
     fn try_from_entity(value: Entity) -> Result<Self, TryFromEntityError> {
-        let key = value.key.unwrap();
-        let title = value
-            .properties
-            .get("title")
-            .ok_or(TryFromEntityError)?
-            .value_type
-            .as_ref()
-            .ok_or(TryFromEntityError)?;
-
-        let IdType::Name(id) = key
-            .path
-            .get(0)
-            .ok_or(TryFromEntityError)?
-            .id_type
-            .as_ref()
-            .ok_or(TryFromEntityError)?
-            .clone()
-        else {
-            return Err(TryFromEntityError);
-        };
-
-        let ValueType::StringValue(title) = title.clone() else {
-            return Err(TryFromEntityError);
-        };
-
+        let id = value.req_key("Book")?.name()?.to_string(); // Ensure the key is of kind 'Book'
+        let title = value.req_string("title")?;
         Ok(Book { id, title })
     }
 }
 
 impl From<Book> for Entity {
     fn from(book: Book) -> Self {
-        let key = Key {
-            path: vec![PathElement {
-                kind: "Book".to_string(),
-                id_type: Some(IdType::Name(book.id)),
-            }],
-            ..Default::default()
-        };
-
-        let value = Value {
-            value_type: Some(ValueType::StringValue(book.title)),
-            ..Default::default()
-        };
-
-        let entity = Entity {
-            key: Some(key),
-            properties: HashMap::from([("title".to_string(), value)]),
-            ..Default::default()
-        };
-
-        entity
+        Entity::builder()
+            .with_key_name("Book", &book.id)
+            .add_string("title", &book.title)
+            .build()
     }
 }
 
