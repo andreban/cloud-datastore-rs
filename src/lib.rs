@@ -312,6 +312,33 @@ impl Entity {
             _ => Err(EntityValueError(format!("Field {} is not a string", name))),
         }
     }
+
+    pub fn opt_string_array(&self, name: &str) -> Result<Option<Vec<String>>, EntityValueError> {
+        let value_type = self.properties.get(name).and_then(|v| v.value_type.clone());
+
+        let Some(value_type) = value_type else {
+            return Ok(None);
+        };
+
+        match value_type {
+            ValueType::ArrayValue(array) => Ok(Some(
+                array
+                    .values
+                    .iter()
+                    .map(|v| match &v.value_type {
+                        Some(ValueType::StringValue(s)) => Ok(s.clone()),
+                        _ => Err(EntityValueError(format!("Field {} is not a string", name))),
+                    })
+                    .collect::<Result<Vec<String>, EntityValueError>>()?,
+            )),
+            _ => Err(EntityValueError(format!("Field {} is not an array", name))),
+        }
+    }
+
+    pub fn req_string_array(&self, name: &str) -> Result<Vec<String>, EntityValueError> {
+        self.opt_string_array(name)
+            .and_then(|v| v.ok_or(EntityValueError("missing required field".to_string())))
+    }
 }
 
 #[derive(Debug)]
