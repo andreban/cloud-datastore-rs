@@ -221,12 +221,12 @@ impl EntityBuilder {
     }
 
     /// Add a string property to the entity.
-    pub fn add_string<T: Into<String>>(self, name: T, value: T) -> Self {
-        self.opt_string(name, Some(value))
+    pub fn add_string<T: Into<String>>(self, name: T, value: T, indexed: bool) -> Self {
+        self.opt_string(name, Some(value), indexed)
     }
 
     /// Add an optional string property to the entity.
-    pub fn opt_string<T: Into<String>>(mut self, name: T, value: Option<T>) -> Self {
+    pub fn opt_string<T: Into<String>>(mut self, name: T, value: Option<T>, indexed: bool) -> Self {
         let Some(value) = value else {
             return self;
         };
@@ -234,6 +234,7 @@ impl EntityBuilder {
         self.entity.properties.insert(
             name.into(),
             Value {
+                exclude_from_indexes: !indexed,
                 value_type: Some(ValueType::StringValue(value.into())),
                 ..Default::default()
             },
@@ -246,6 +247,7 @@ impl EntityBuilder {
         self.entity.properties.insert(
             name.into(),
             Value {
+                exclude_from_indexes: true,
                 value_type: Some(ValueType::ArrayValue(ArrayValue {
                     values: values
                         .into_iter()

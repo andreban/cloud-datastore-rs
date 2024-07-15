@@ -40,7 +40,7 @@ impl From<Book> for Entity {
     fn from(book: Book) -> Self {
         Entity::builder()
             .with_key_name("Book", &book.id)
-            .add_string("title", &book.title)
+            .add_string("title", &book.title, true)
             .build()
     }
 }
