@@ -247,7 +247,6 @@ impl EntityBuilder {
         self.entity.properties.insert(
             name.into(),
             Value {
-                exclude_from_indexes: true,
                 value_type: Some(ValueType::ArrayValue(ArrayValue {
                     values: values
                         .into_iter()
