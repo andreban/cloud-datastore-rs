@@ -227,10 +227,14 @@ impl EntityBuilder {
 
     /// Add an optional string property to the entity.
     pub fn opt_string<T: Into<String>>(mut self, name: T, value: Option<T>) -> Self {
+        let Some(value) = value else {
+            return self;
+        };
+
         self.entity.properties.insert(
             name.into(),
             Value {
-                value_type: value.map(|value| ValueType::StringValue(value.into())),
+                value_type: Some(ValueType::StringValue(value.into())),
                 ..Default::default()
             },
         );
