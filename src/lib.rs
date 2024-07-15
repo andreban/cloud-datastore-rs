@@ -176,8 +176,11 @@ impl Datastore {
 
         let response = self.service.lookup(request).await?.into_inner();
 
-        let result = response.found.into_iter().next().unwrap().entity;
-        let result = result.map(|e| T::try_from_entity(e)).transpose();
+        let Some(result) = response.found.into_iter().next() else {
+            return Ok(None);
+        };
+
+        let result = result.entity.map(|e| T::try_from_entity(e)).transpose();
 
         match result {
             Ok(Some(entity)) => Ok(Some(entity)),
