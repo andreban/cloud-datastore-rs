@@ -7,7 +7,8 @@ use cloud_datastore_rs::google::datastore::{
         datastore_client::DatastoreClient,
         key::{path_element::IdType, PathElement},
         mutation::Operation,
-        CommitRequest, Entity, Key, LookupRequest, Mutation, Value,
+        run_query_request::QueryType,
+        CommitRequest, Entity, GqlQuery, Key, LookupRequest, Mutation, RunQueryRequest, Value,
     },
 };
 use tonic::{
@@ -44,7 +45,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     upsert_entity(&mut service, project_id.clone()).await?;
 
-    load_entity(&mut service, project_id).await?;
+    load_entity(&mut service, project_id.clone()).await?;
+
+    let query_response = service
+        .run_query(RunQueryRequest {
+            project_id,
+            database_id: "".to_string(),
+            query_type: Some(QueryType::GqlQuery(GqlQuery {
+                query_string: "select * from Book".to_string(),
+                ..Default::default()
+            })),
+
+            ..Default::default()
+        })
+        .await?;
+
+    println!("{query_response:?}");
 
     Ok(())
 }
