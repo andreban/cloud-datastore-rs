@@ -11,7 +11,8 @@ use google::datastore::v1::{
     key::{path_element::IdType, PathElement},
     mutation::Operation,
     value::ValueType,
-    ArrayValue, CommitRequest, CommitResponse, Entity, Key, Mutation, Value,
+    ArrayValue, CommitRequest, CommitResponse, Entity, Key, Mutation, RunQueryRequest,
+    RunQueryResponse, Value,
 };
 use tonic::{
     metadata::MetadataValue,
@@ -187,6 +188,17 @@ impl Datastore {
             Ok(None) => Ok(None),
             Err(e) => Err(Box::new(e)),
         }
+    }
+
+    /// Run a query. The provided query has the project_id set to the project_id of the Datastore instance.
+    /// The query is specified in the `RunQueryRequest` parameter.
+    /// The result is returned as a `RunQueryResponse`.
+    pub async fn run_query(
+        &mut self,
+        mut request: RunQueryRequest,
+    ) -> Result<RunQueryResponse, Box<dyn Error>> {
+        request.project_id = self.project_id.clone();
+        Ok(self.service.run_query(request).await?.into_inner())
     }
 }
 
