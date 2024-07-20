@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-use error::CloudDatastoreError;
+pub use error::CloudDatastoreError;
 use gcp_auth::{Token, TokenProvider};
 use google::datastore::v1::{
     commit_request::Mode,
