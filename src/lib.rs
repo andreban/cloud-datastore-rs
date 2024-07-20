@@ -1,9 +1,12 @@
+mod error;
+
 use std::{
     error::Error,
     fmt::{self, Display, Formatter},
     sync::Arc,
 };
 
+use error::CloudDatastoreError;
 use gcp_auth::{Token, TokenProvider};
 use google::datastore::v1::{
     commit_request::Mode,
@@ -117,7 +120,7 @@ impl Datastore {
     pub async fn new(
         project_id: String,
         token_provider: Arc<dyn TokenProvider>,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, CloudDatastoreError> {
         let tls_config = ClientTlsConfig::new().with_native_roots();
 
         let channel = Channel::from_shared(HTTP_ENDPOINT)?
@@ -143,7 +146,7 @@ impl Datastore {
     pub async fn upsert_entity(
         &mut self,
         entity: impl Into<Entity>,
-    ) -> Result<CommitResponse, Box<dyn Error>> {
+    ) -> Result<CommitResponse, CloudDatastoreError> {
         let entity = entity.into();
 
         let request = CommitRequest {
@@ -166,7 +169,7 @@ impl Datastore {
     pub async fn lookup_entity<T: TryFromEntity>(
         &mut self,
         key: impl Into<Key>,
-    ) -> Result<Option<T>, Box<dyn Error>> {
+    ) -> Result<Option<T>, CloudDatastoreError> {
         let key = key.into();
 
         let request = google::datastore::v1::LookupRequest {
@@ -186,7 +189,7 @@ impl Datastore {
         match result {
             Ok(Some(entity)) => Ok(Some(entity)),
             Ok(None) => Ok(None),
-            Err(e) => Err(Box::new(e)),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -196,7 +199,7 @@ impl Datastore {
     pub async fn run_query(
         &mut self,
         mut request: RunQueryRequest,
-    ) -> Result<RunQueryResponse, Box<dyn Error>> {
+    ) -> Result<RunQueryResponse, CloudDatastoreError> {
         request.project_id = self.project_id.clone();
         Ok(self.service.run_query(request).await?.into_inner())
     }
