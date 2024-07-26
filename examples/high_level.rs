@@ -63,7 +63,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let book: Option<Book> = datastore
         .lookup_entity(BookKey("book_one".to_string()))
         .await?;
-
     println!("{:?}", book);
+
+    let result = datastore
+        .upsert_entities(vec![
+            Book {
+                id: "book_three".to_string(),
+                title: "Book Three Title".to_string(),
+            },
+            Book {
+                id: "book_four".to_string(),
+                title: "Book Four Title".to_string(),
+            },
+        ])
+        .await?;
+
+    println!("{:?}", result);
+
     Ok(())
 }
