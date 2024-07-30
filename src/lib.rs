@@ -9,14 +9,16 @@ use std::{
 pub use error::CloudDatastoreError;
 use gcp_auth::{Token, TokenProvider};
 use google::datastore::v1::{
-    commit_request::Mode,
+    commit_request::{Mode as CommitMode, TransactionSelector},
     datastore_client::DatastoreClient,
     key::{path_element::IdType, PathElement},
     mutation::Operation,
+    transaction_options::Mode as TransactionMode,
     value::ValueType,
     ArrayValue, CommitRequest, CommitResponse, Entity, Key, Mutation, RunQueryRequest,
-    RunQueryResponse, Value,
+    RunQueryResponse, TransactionOptions, Value,
 };
+
 use tonic::{
     metadata::MetadataValue,
     service::{interceptor::InterceptedService, Interceptor},
@@ -140,6 +142,34 @@ impl Datastore {
         Ok(datastore)
     }
 
+    pub async fn upsert_entities(
+        &mut self,
+        entities: Vec<impl Into<Entity>>,
+    ) -> Result<CommitResponse, CloudDatastoreError> {
+        let mutations: Vec<Mutation> = entities
+            .into_iter()
+            .map(|e| Mutation {
+                operation: Some(Operation::Upsert(e.into())),
+                ..Default::default()
+            })
+            .collect();
+
+        let request = CommitRequest {
+            project_id: self.project_id.clone(),
+            database_id: "".to_string(), // use empty string '' to refer the default database.
+            mode: CommitMode::Transactional as i32,
+            transaction_selector: Some(TransactionSelector::SingleUseTransaction(
+                TransactionOptions {
+                    mode: Some(TransactionMode::ReadWrite(Default::default())),
+                },
+            )),
+            mutations,
+            ..Default::default()
+        };
+
+        Ok(self.service.commit(request).await?.into_inner())
+    }
+
     ///
     /// Upsert an entity.
     ///
@@ -152,7 +182,7 @@ impl Datastore {
         let request = CommitRequest {
             project_id: self.project_id.clone(),
             database_id: "".to_string(), // use empty string '' to refer the default database.
-            mode: Mode::NonTransactional as i32,
+            mode: CommitMode::NonTransactional as i32,
             mutations: vec![Mutation {
                 operation: Some(Operation::Upsert(entity)),
                 ..Default::default()
