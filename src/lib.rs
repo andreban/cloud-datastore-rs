@@ -19,6 +19,7 @@ use google::datastore::v1::{
     RunQueryResponse, TransactionOptions, Value,
 };
 
+use prost_types::Timestamp;
 use tonic::{
     metadata::MetadataValue,
     service::{interceptor::InterceptedService, Interceptor},
@@ -69,6 +70,22 @@ impl From<EntityValueError> for TryFromEntityError {
     }
 }
 
+impl From<String> for ValueType {
+    fn from(s: String) -> Self {
+        ValueType::StringValue(s)
+    }
+}
+
+#[cfg(feature = "time")]
+impl From<time::OffsetDateTime> for ValueType {
+    fn from(t: time::OffsetDateTime) -> Self {
+        ValueType::TimestampValue(Timestamp {
+            seconds: t.unix_timestamp(),
+            nanos: 0,
+        })
+    }
+}
+
 pub trait TryFromEntity: Sized {
     fn try_from_entity(entity: Entity) -> Result<Self, TryFromEntityError>;
 }
@@ -84,10 +101,11 @@ impl Interceptor for TokenInterceptor {
     fn call(&mut self, mut request: Request<()>) -> Result<Request<()>, Status> {
         // Retrieve a token from the token provider, using the async runtime.
         let token: Result<Arc<Token>, Status> = futures::executor::block_on(async {
-            let token =
-                self.token_provider.token(AUTH_SCOPE).await.map_err(|e| {
-                    Status::internal(format!("Failed to get token: {}", e.to_string()))
-                })?;
+            let token = self
+                .token_provider
+                .token(AUTH_SCOPE)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to get token: {}", e)))?;
             Ok(token)
         });
 
@@ -98,7 +116,7 @@ impl Interceptor for TokenInterceptor {
         let bearer_token = format!("Bearer {}", token.as_str());
         let header_value: MetadataValue<_> = bearer_token
             .parse()
-            .map_err(|_| Status::internal(format!("Failed to parse token")))?;
+            .map_err(|_| Status::internal("Failed to parse token".to_string()))?;
 
         // Insert the token into the request metadata.
         request.metadata_mut().insert("authorization", header_value);
@@ -164,7 +182,6 @@ impl Datastore {
                 },
             )),
             mutations,
-            ..Default::default()
         };
 
         Ok(self.service.commit(request).await?.into_inner())
@@ -265,26 +282,73 @@ impl EntityBuilder {
         self
     }
 
-    /// Add a string property to the entity.
-    pub fn add_string<T: Into<String>>(self, name: T, value: T, indexed: bool) -> Self {
-        self.opt_string(name, Some(value), indexed)
-    }
-
-    /// Add an optional string property to the entity.
-    pub fn opt_string<T: Into<String>>(mut self, name: T, value: Option<T>, indexed: bool) -> Self {
-        let Some(value) = value else {
-            return self;
-        };
-
+    /// Add a value to the entity.
+    pub fn add_value<T: Into<String>, V: Into<ValueType>>(
+        mut self,
+        name: T,
+        value: V,
+        indexed: bool,
+    ) -> Self {
         self.entity.properties.insert(
             name.into(),
             Value {
                 exclude_from_indexes: !indexed,
-                value_type: Some(ValueType::StringValue(value.into())),
+                value_type: Some(value.into()),
                 ..Default::default()
             },
         );
         self
+    }
+
+    /// Add an optional value to the entity.
+    pub fn opt_value<T: Into<String>, V: Into<ValueType>>(
+        self,
+        name: T,
+        value: Option<V>,
+        indexed: bool,
+    ) -> Self {
+        match value {
+            Some(value) => self.add_value(name, value, indexed),
+            None => self,
+        }
+    }
+
+    /// Add a string property to the entity.
+    pub fn add_string<T: Into<String>>(self, name: T, value: T, indexed: bool) -> Self {
+        self.add_value(name, value.into(), indexed)
+    }
+
+    /// Add an optional string property to the entity.
+    pub fn opt_string<T: Into<String>>(self, name: T, value: Option<T>, indexed: bool) -> Self {
+        self.opt_value(name, value.map(Into::into), indexed)
+    }
+
+    #[cfg(feature = "time")]
+    pub fn add_time<T: Into<String>>(
+        self,
+        name: T,
+        value: time::OffsetDateTime,
+        indexed: bool,
+    ) -> Self {
+        self.add_value(
+            name,
+            <time::OffsetDateTime as Into<ValueType>>::into(value),
+            indexed,
+        )
+    }
+
+    #[cfg(feature = "time")]
+    pub fn opt_time<T: Into<String>>(
+        self,
+        name: T,
+        value: Option<time::OffsetDateTime>,
+        indexed: bool,
+    ) -> Self {
+        self.opt_value(
+            name,
+            value.map(<time::OffsetDateTime as Into<ValueType>>::into),
+            indexed,
+        )
     }
 
     /// Add an integer property to the entity.
@@ -295,12 +359,9 @@ impl EntityBuilder {
                 value_type: Some(ValueType::ArrayValue(ArrayValue {
                     values: values
                         .into_iter()
-                        .map(|v| {
-                            let v: String = v.into();
-                            Value {
-                                value_type: Some(ValueType::StringValue(v)),
-                                ..Default::default()
-                            }
+                        .map(|v| Value {
+                            value_type: Some(v.into()),
+                            ..Default::default()
                         })
                         .collect(),
                 })),
@@ -334,17 +395,17 @@ impl Entity {
         let key = self
             .key
             .as_ref()
-            .ok_or(EntityValueError(format!("Missing Key")))?;
+            .ok_or(EntityValueError("Missing Key".to_string()))?;
 
         let key_kind = key.kind().map_err(|e| EntityValueError(e.to_string()))?;
 
         if key_kind == kind {
             Ok(key)
         } else {
-            return Err(EntityValueError(format!(
+            Err(EntityValueError(format!(
                 "Invalid Key Kind. Expected '{}'.",
                 kind,
-            )));
+            )))
         }
     }
 
