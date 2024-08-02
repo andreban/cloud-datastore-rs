@@ -19,7 +19,6 @@ use google::datastore::v1::{
     RunQueryResponse, TransactionOptions, Value,
 };
 
-use prost_types::Timestamp;
 use tonic::{
     metadata::MetadataValue,
     service::{interceptor::InterceptedService, Interceptor},
@@ -79,7 +78,7 @@ impl From<String> for ValueType {
 #[cfg(feature = "time")]
 impl From<time::OffsetDateTime> for ValueType {
     fn from(t: time::OffsetDateTime) -> Self {
-        ValueType::TimestampValue(Timestamp {
+        ValueType::TimestampValue(prost_types::Timestamp {
             seconds: t.unix_timestamp(),
             nanos: 0,
         })
