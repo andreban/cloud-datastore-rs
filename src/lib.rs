@@ -323,7 +323,7 @@ impl EntityBuilder {
     }
 
     #[cfg(feature = "time")]
-    pub fn add_time<T: Into<String>>(
+    pub fn add_offset_date_time<T: Into<String>>(
         self,
         name: T,
         value: time::OffsetDateTime,
@@ -337,7 +337,7 @@ impl EntityBuilder {
     }
 
     #[cfg(feature = "time")]
-    pub fn opt_time<T: Into<String>>(
+    pub fn opt_offset_date_time<T: Into<String>>(
         self,
         name: T,
         value: Option<time::OffsetDateTime>,
@@ -414,16 +414,40 @@ impl Entity {
     }
 
     pub fn opt_string(&self, name: &str) -> Result<Option<String>, EntityValueError> {
-        let value_type = self.properties.get(name).and_then(|v| v.value_type.clone());
-
-        let Some(value_type) = value_type else {
-            return Ok(None);
-        };
-
-        match value_type {
-            ValueType::StringValue(s) => Ok(Some(s.clone())),
-            _ => Err(EntityValueError(format!("Field {} is not a string", name))),
+        match self.properties.get(name) {
+            Some(Value {
+                meaning: _,
+                exclude_from_indexes: _,
+                value_type: Some(ValueType::StringValue(value)),
+            }) => Ok(Some(value.clone())),
+            None => Ok(None),
+            _ => Err(EntityValueError(format!("Field {name} is not a string"))),
         }
+    }
+
+    #[cfg(feature = "time")]
+    pub fn opt_offset_date_time(
+        &self,
+        name: &str,
+    ) -> Result<Option<time::OffsetDateTime>, EntityValueError> {
+        match self.properties.get(name) {
+            Some(Value {
+                meaning: _,
+                exclude_from_indexes: _,
+                value_type: Some(ValueType::TimestampValue(timestamp)),
+            }) => Ok(time::OffsetDateTime::from_unix_timestamp(timestamp.seconds).ok()),
+            None => Ok(None),
+            _ => Err(EntityValueError(format!("Field {name} is not a Timestamp"))),
+        }
+    }
+
+    #[cfg(feature = "time")]
+    pub fn req_offset_date_time(
+        &self,
+        name: &str,
+    ) -> Result<time::OffsetDateTime, EntityValueError> {
+        self.opt_offset_date_time(name)
+            .and_then(|v| v.ok_or(EntityValueError("missing required field".to_string())))
     }
 
     pub fn opt_string_array(&self, name: &str) -> Result<Option<Vec<String>>, EntityValueError> {
