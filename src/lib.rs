@@ -6,6 +6,8 @@ use std::{
     sync::Arc,
 };
 
+use std::str::FromStr;
+
 pub use error::CloudDatastoreError;
 use gcp_auth::{Token, TokenProvider};
 use google::datastore::v1::{
@@ -20,7 +22,7 @@ use google::datastore::v1::{
 };
 
 use tonic::{
-    metadata::MetadataValue,
+    metadata::{AsciiMetadataValue, MetadataValue},
     service::{interceptor::InterceptedService, Interceptor},
     transport::{Channel, ClientTlsConfig},
     Request, Status,
@@ -28,6 +30,8 @@ use tonic::{
 
 const AUTH_SCOPE: &[&str] = &["https://www.googleapis.com/auth/cloud-platform"];
 const HTTP_ENDPOINT: &str = "https://datastore.googleapis.com";
+const HEADER_AUTHORIZATION: &str = "authorization";
+const HEADER_REQUEST_PARAMS: &str = "x-goog-request-params";
 
 pub mod google {
     #[path = ""]
@@ -90,11 +94,30 @@ pub trait TryFromEntity: Sized {
 }
 
 #[derive(Clone)]
-struct TokenInterceptor {
+struct RequestInterceptor {
+    request_params: String,
     token_provider: Arc<dyn TokenProvider>,
 }
 
-impl Interceptor for TokenInterceptor {
+impl RequestInterceptor {
+    pub fn new(
+        project_id: &str,
+        database_id: Option<&str>,
+        token_provider: Arc<dyn TokenProvider>,
+    ) -> Self {
+        let request_params = match database_id {
+            Some(database_id) => format!("project_id={}&database_id={}", project_id, database_id),
+            None => format!("project_id={}", project_id),
+        };
+
+        RequestInterceptor {
+            request_params,
+            token_provider,
+        }
+    }
+}
+
+impl Interceptor for RequestInterceptor {
     // The `call` method is called for each request. We use it inject a bearer token into the request
     // metadata. Since the `call` method is synchronous, use `futures::executor::block_on` to run.
     fn call(&mut self, mut request: Request<()>) -> Result<Request<()>, Status> {
@@ -118,7 +141,17 @@ impl Interceptor for TokenInterceptor {
             .map_err(|_| Status::internal("Failed to parse token".to_string()))?;
 
         // Insert the token into the request metadata.
-        request.metadata_mut().insert("authorization", header_value);
+        request
+            .metadata_mut()
+            .insert(HEADER_AUTHORIZATION, header_value);
+
+        // Insert the project_id and database_id into the request metadata.
+        let header_value = AsciiMetadataValue::from_str(&self.request_params)
+            .map_err(|_| Status::internal("Failed to request params".to_string()))?;
+        request
+            .metadata_mut()
+            .insert(HEADER_REQUEST_PARAMS, header_value);
+
         Ok(request)
     }
 }
@@ -129,7 +162,8 @@ impl Interceptor for TokenInterceptor {
 #[derive(Clone, Debug)]
 pub struct Datastore {
     project_id: String,
-    service: DatastoreClient<InterceptedService<Channel, TokenInterceptor>>,
+    database_id: String,
+    service: DatastoreClient<InterceptedService<Channel, RequestInterceptor>>,
 }
 
 impl Datastore {
@@ -138,6 +172,7 @@ impl Datastore {
     ///
     pub async fn new(
         project_id: String,
+        database_id: Option<String>,
         token_provider: Arc<dyn TokenProvider>,
     ) -> Result<Self, CloudDatastoreError> {
         let tls_config = ClientTlsConfig::new().with_native_roots();
@@ -147,16 +182,23 @@ impl Datastore {
             .connect()
             .await?;
 
-        let interceptor = TokenInterceptor { token_provider };
+        let interceptor =
+            RequestInterceptor::new(&project_id, database_id.as_deref(), token_provider);
 
         let service = DatastoreClient::with_interceptor(channel, interceptor);
 
         let datastore = Datastore {
             project_id,
+            database_id: database_id.unwrap_or_default(),
             service,
         };
 
         Ok(datastore)
+    }
+
+    pub fn with_database_id(mut self, database_id: String) -> Self {
+        self.database_id = database_id;
+        self
     }
 
     pub async fn upsert_entities(
@@ -173,7 +215,7 @@ impl Datastore {
 
         let request = CommitRequest {
             project_id: self.project_id.clone(),
-            database_id: "".to_string(), // use empty string '' to refer the default database.
+            database_id: self.database_id.clone(), // use empty string '' to refer the default database.
             mode: CommitMode::Transactional as i32,
             transaction_selector: Some(TransactionSelector::SingleUseTransaction(
                 TransactionOptions {
@@ -197,7 +239,7 @@ impl Datastore {
 
         let request = CommitRequest {
             project_id: self.project_id.clone(),
-            database_id: "".to_string(), // use empty string '' to refer the default database.
+            database_id: self.database_id.clone(), // use empty string '' to refer the default database.
             mode: CommitMode::NonTransactional as i32,
             mutations: vec![Mutation {
                 operation: Some(Operation::Upsert(entity)),

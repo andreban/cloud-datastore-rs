@@ -48,9 +48,10 @@ impl From<Book> for Entity {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let project_id = std::env::var("PROJECT_ID")?;
+    let database_id = std::env::var("DATABASE_ID").ok();
     let token_provider = gcp_auth::provider().await?;
 
-    let mut datastore = Datastore::new(project_id, token_provider).await?;
+    let mut datastore = Datastore::new(project_id, database_id, token_provider).await?;
 
     let book = Book {
         id: "book_one".to_string(),
