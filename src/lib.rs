@@ -15,10 +15,11 @@ use google::datastore::v1::{
     datastore_client::DatastoreClient,
     key::{path_element::IdType, PathElement},
     mutation::Operation,
+    run_query_request::QueryType,
     transaction_options::Mode as TransactionMode,
     value::ValueType,
-    ArrayValue, CommitRequest, CommitResponse, Entity, Key, Mutation, RunQueryRequest,
-    RunQueryResponse, TransactionOptions, Value,
+    ArrayValue, CommitRequest, CommitResponse, Entity, Key, KindExpression, Mutation, Query,
+    RunQueryRequest, RunQueryResponse, TransactionOptions, Value,
 };
 
 use tonic::{
@@ -27,6 +28,7 @@ use tonic::{
     transport::{Channel, ClientTlsConfig},
     Request, Status,
 };
+use tracing::debug;
 
 const AUTH_SCOPE: &[&str] = &["https://www.googleapis.com/auth/cloud-platform"];
 const HTTP_ENDPOINT: &str = "https://datastore.googleapis.com";
@@ -91,6 +93,10 @@ impl From<time::OffsetDateTime> for ValueType {
 
 pub trait TryFromEntity: Sized {
     fn try_from_entity(entity: Entity) -> Result<Self, TryFromEntityError>;
+}
+
+pub trait Kind {
+    fn kind() -> &'static str;
 }
 
 #[derive(Clone)]
@@ -196,11 +202,6 @@ impl Datastore {
         Ok(datastore)
     }
 
-    pub fn with_database_id(mut self, database_id: String) -> Self {
-        self.database_id = database_id;
-        self
-    }
-
     pub async fn upsert_entities(
         &mut self,
         entities: Vec<impl Into<Entity>>,
@@ -262,6 +263,7 @@ impl Datastore {
 
         let request = google::datastore::v1::LookupRequest {
             project_id: self.project_id.clone(),
+            database_id: self.database_id.clone(),
             keys: vec![key],
             ..Default::default()
         };
@@ -281,6 +283,37 @@ impl Datastore {
         }
     }
 
+    /// Load all entities of a given kind.
+    pub async fn load_entities<T: TryFromEntity + Kind>(
+        &mut self,
+    ) -> Result<Vec<T>, CloudDatastoreError> {
+        let request = RunQueryRequest {
+            project_id: self.project_id.clone(),
+            database_id: self.database_id.clone(),
+            query_type: Some(QueryType::Query(Query {
+                kind: vec![KindExpression {
+                    name: T::kind().to_string(),
+                }],
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        let response = self.run_query(request).await?;
+        let Some(batch) = response.batch else {
+            return Ok(vec![]);
+        };
+
+        let entities = batch
+            .entity_results
+            .into_iter()
+            .filter_map(|found| found.entity)
+            .map(|entity| T::try_from_entity(entity))
+            .collect::<Result<Vec<T>, TryFromEntityError>>()?;
+
+        Ok(entities)
+    }
+
     /// Run a query. The provided query has the project_id set to the project_id of the Datastore instance.
     /// The query is specified in the `RunQueryRequest` parameter.
     /// The result is returned as a `RunQueryResponse`.
@@ -289,6 +322,7 @@ impl Datastore {
         mut request: RunQueryRequest,
     ) -> Result<RunQueryResponse, CloudDatastoreError> {
         request.project_id = self.project_id.clone();
+        request.database_id = self.database_id.clone();
         Ok(self.service.run_query(request).await?.into_inner())
     }
 }
@@ -393,12 +427,7 @@ impl EntityBuilder {
     }
 
     /// Add an integer property to the entity.
-    pub fn add_string_array<T: Into<String>>(
-        mut self,
-        name: T,
-        values: Vec<String>,
-        indexed: bool,
-    ) -> Self {
+    pub fn add_string_array<T: Into<String>>(mut self, name: T, values: Vec<String>) -> Self {
         self.entity.properties.insert(
             name.into(),
             Value {
@@ -411,7 +440,6 @@ impl EntityBuilder {
                         })
                         .collect(),
                 })),
-                exclude_from_indexes: !indexed,
                 ..Default::default()
             },
         );
@@ -502,6 +530,7 @@ impl Entity {
         let value_type = self.properties.get(name).and_then(|v| v.value_type.clone());
 
         let Some(value_type) = value_type else {
+            debug!(field = name, "No value found for field.");
             return Ok(None);
         };
 
@@ -521,8 +550,8 @@ impl Entity {
     }
 
     pub fn req_string_array(&self, name: &str) -> Result<Vec<String>, EntityValueError> {
-        self.opt_string_array(name)
-            .and_then(|v| v.ok_or(EntityValueError("missing required field".to_string())))
+        let result = self.opt_string_array(name)?;
+        result.ok_or_else(|| EntityValueError(format!("Entity missing required field '{}'", name)))
     }
 }
 

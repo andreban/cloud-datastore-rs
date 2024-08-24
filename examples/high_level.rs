@@ -5,7 +5,7 @@ use cloud_datastore_rs::{
         key::{path_element::IdType, PathElement},
         Entity, Key,
     },
-    Datastore, TryFromEntity, TryFromEntityError,
+    Datastore, Kind, TryFromEntity, TryFromEntityError,
 };
 
 struct BookKey(String);
@@ -31,10 +31,17 @@ struct Book {
 
 impl TryFromEntity for Book {
     fn try_from_entity(value: Entity) -> Result<Self, TryFromEntityError> {
+        println!("{:?}", value);
         let id = value.req_key("Book")?.name()?.to_string(); // Ensure the key is of kind 'Book'
         let title = value.req_string("title")?;
-        let tags = value.req_string_array("tags").unwrap_or_default();
+        let tags = value.req_string_array("tags")?;
         Ok(Book { id, title, tags })
+    }
+}
+
+impl Kind for Book {
+    fn kind() -> &'static str {
+        "Book"
     }
 }
 
@@ -43,7 +50,7 @@ impl From<Book> for Entity {
         Entity::builder()
             .with_key_name("Book", &book.id)
             .add_string("title", &book.title, true)
-            .add_string_array("tags", book.tags, true)
+            .add_string_array("tags", book.tags)
             .build()
     }
 }
@@ -52,6 +59,7 @@ impl From<Book> for Entity {
 async fn main() -> Result<(), Box<dyn Error>> {
     let project_id = std::env::var("PROJECT_ID")?;
     let database_id = std::env::var("DATABASE_ID").ok();
+    println!("Database ID: {:?}", database_id);
     let token_provider = gcp_auth::provider().await?;
 
     let mut datastore = Datastore::new(project_id, database_id, token_provider).await?;
@@ -86,6 +94,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await?;
 
     println!("{:?}", result);
+
+    let all_books = datastore.load_entities::<Book>().await?;
+    println!("{:?}", all_books);
 
     Ok(())
 }
