@@ -26,13 +26,15 @@ impl From<BookKey> for Key {
 struct Book {
     id: String,
     title: String,
+    tags: Vec<String>,
 }
 
 impl TryFromEntity for Book {
     fn try_from_entity(value: Entity) -> Result<Self, TryFromEntityError> {
         let id = value.req_key("Book")?.name()?.to_string(); // Ensure the key is of kind 'Book'
         let title = value.req_string("title")?;
-        Ok(Book { id, title })
+        let tags = value.req_string_array("tags").unwrap_or_default();
+        Ok(Book { id, title, tags })
     }
 }
 
@@ -41,6 +43,7 @@ impl From<Book> for Entity {
         Entity::builder()
             .with_key_name("Book", &book.id)
             .add_string("title", &book.title, true)
+            .add_string_array("tags", book.tags, true)
             .build()
     }
 }
@@ -56,6 +59,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let book = Book {
         id: "book_one".to_string(),
         title: "Book One Title".to_string(),
+        tags: vec!["tag_one".to_string(), "tag_two".to_string()],
     };
 
     let result = datastore.upsert_entity(book).await?;
@@ -71,10 +75,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Book {
                 id: "book_three".to_string(),
                 title: "Book Three Title".to_string(),
+                tags: vec!["tag_three".to_string()],
             },
             Book {
                 id: "book_four".to_string(),
                 title: "Book Four Title".to_string(),
+                tags: vec!["tag_four".to_string()],
             },
         ])
         .await?;

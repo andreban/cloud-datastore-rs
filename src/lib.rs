@@ -393,7 +393,12 @@ impl EntityBuilder {
     }
 
     /// Add an integer property to the entity.
-    pub fn add_string_array<T: Into<String>>(mut self, name: T, values: Vec<String>) -> Self {
+    pub fn add_string_array<T: Into<String>>(
+        mut self,
+        name: T,
+        values: Vec<String>,
+        indexed: bool,
+    ) -> Self {
         self.entity.properties.insert(
             name.into(),
             Value {
@@ -406,6 +411,7 @@ impl EntityBuilder {
                         })
                         .collect(),
                 })),
+                exclude_from_indexes: !indexed,
                 ..Default::default()
             },
         );
