@@ -8,6 +8,7 @@ use cloud_datastore_rs::{
     Datastore, Kind, TryFromEntity, TryFromEntityError,
 };
 
+#[derive(Debug)]
 struct BookKey(String);
 
 impl From<BookKey> for Key {
@@ -24,7 +25,7 @@ impl From<BookKey> for Key {
 
 #[derive(Debug)]
 struct Book {
-    id: String,
+    id: BookKey,
     title: String,
     tags: Vec<String>,
 }
@@ -32,7 +33,7 @@ struct Book {
 impl TryFromEntity for Book {
     fn try_from_entity(value: Entity) -> Result<Self, TryFromEntityError> {
         println!("{:?}", value);
-        let id = value.req_key("Book")?.name()?.to_string(); // Ensure the key is of kind 'Book'
+        let id = BookKey(value.req_key("Book")?.name()?.to_string()); // Ensure the key is of kind 'Book'
         let title = value.req_string("title")?;
         let tags = value.req_string_array("tags")?;
         Ok(Book { id, title, tags })
@@ -48,7 +49,7 @@ impl Kind for Book {
 impl From<Book> for Entity {
     fn from(book: Book) -> Self {
         Entity::builder()
-            .with_key_name("Book", &book.id)
+            .with_key_name("Book", &book.id.0)
             .add_string("title", &book.title, true)
             .add_string_array("tags", book.tags)
             .build()
@@ -65,7 +66,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut datastore = Datastore::new(project_id, database_id, token_provider).await?;
 
     let book = Book {
-        id: "book_one".to_string(),
+        id: BookKey("book_one".to_string()),
         title: "Book One Title".to_string(),
         tags: vec!["tag_one".to_string(), "tag_two".to_string()],
     };
@@ -81,12 +82,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let result = datastore
         .upsert_entities(vec![
             Book {
-                id: "book_three".to_string(),
+                id: BookKey("book_three".to_string()),
                 title: "Book Three Title".to_string(),
                 tags: vec!["tag_three".to_string()],
             },
             Book {
-                id: "book_four".to_string(),
+                id: BookKey("book_four".to_string()),
                 title: "Book Four Title".to_string(),
                 tags: vec!["tag_four".to_string()],
             },
@@ -94,6 +95,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await?;
 
     println!("{:?}", result);
+
+    datastore
+        .delete_entity(BookKey("book_one".to_string()))
+        .await?;
 
     let all_books = datastore.load_entities::<Book>().await?;
     println!("{:?}", all_books);

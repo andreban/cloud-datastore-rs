@@ -253,6 +253,25 @@ impl Datastore {
     }
 
     ///
+    /// Delete an entity.
+    ///
+    pub async fn delete_entity(&mut self, key: impl Into<Key>) -> Result<(), CloudDatastoreError> {
+        let key = key.into();
+        let request = CommitRequest {
+            project_id: self.project_id.clone(),
+            database_id: self.database_id.clone(), // use empty string '' to refer the default database.
+            mode: CommitMode::NonTransactional as i32,
+            mutations: vec![Mutation {
+                operation: Some(Operation::Delete(key)),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        self.service.commit(request).await?;
+        Ok(())
+    }
+
+    ///
     /// Load an entity.
     ///
     pub async fn lookup_entity<T: TryFromEntity>(
