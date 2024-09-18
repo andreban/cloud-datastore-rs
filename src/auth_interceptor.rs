@@ -40,16 +40,17 @@ impl<I> Service<Request<BoxBody>> for AuthInterceptor<I>
 where
     I: Service<http::Request<BoxBody>, Response = http::Response<BoxBody>> + Send + Clone + 'static,
     I::Future: Send + 'static,
+    I::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
 {
     type Response = I::Response;
-    type Error = I::Error;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(
         &mut self,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
+        self.inner.poll_ready(cx).map_err(Into::into)
     }
 
     fn call(&mut self, mut req: Request<BoxBody>) -> Self::Future {
@@ -62,15 +63,20 @@ where
         let token_provider = self.token_provider.clone();
         let request_params = self.request_params.clone();
         Box::pin(async move {
-            let token = token_provider.token(AUTH_SCOPE).await.unwrap();
+            let token = token_provider
+                .token(AUTH_SCOPE)
+                .await
+                .map_err(|e| tonic::Status::internal(e.to_string()))?;
             req.headers_mut().insert(
                 HEADER_AUTHORIZATION,
-                format!("Bearer {}", token.as_str()).parse().unwrap(),
+                format!("Bearer {}", token.as_str())
+                    .parse()
+                    .map_err(|_| tonic::Status::internal("InvalidHeaderValue"))?,
             );
 
             req.headers_mut()
                 .insert(HEADER_REQUEST_PARAMS, request_params.parse().unwrap());
-            let response = inner.call(req).await?;
+            let response = inner.call(req).await.map_err(Into::into)?;
             Ok(response)
         })
     }
