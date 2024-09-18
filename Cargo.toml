@@ -4,17 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-futures = "0.3"
-gcp_auth = "0.12"
-http = "1.1"
-prost = "0.13"
-prost-types = "0.13"
-time = { version = "0.3", optional = true }
-tokio = { version = "^1.39", features = ["full"] }
-tonic = { version = "^0.12.1", features = ["tls", "tls-roots"] }
-tonic-build = { version = "0.12.1", features = ["prost"], optional = true }
-tonic-types = "^0.12.1"
-tracing = "0.1.40"
+futures = "^0.3"
+gcp_auth = "^0.12"
+http = "^1.1"
+prost = "^0.13"
+prost-types = "^0.13"
+time = { version = "^0.3", optional = true }
+tokio = { version = "^1.40", features = ["full"] }
+tonic = { version = "^0.12", features = ["tls", "tls-roots"] }
+tonic-build = { version = "^0.12", features = ["prost"], optional = true }
+tonic-types = "^0.12"
+tower = "^0.5"
+tracing = "^0.1"
 
 [features]
 protobuild = ["tonic-build"]
@@ -26,3 +27,5 @@ required-features = ["protobuild"]
 
 [build-dependencies]
 
+[dev-dependencies]
+tracing-subscriber = "0.3.18"

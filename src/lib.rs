@@ -1,3 +1,4 @@
+mod auth_interceptor;
 mod error;
 
 use std::{
@@ -6,10 +7,9 @@ use std::{
     sync::Arc,
 };
 
-use std::str::FromStr;
-
+use auth_interceptor::AuthInterceptor;
 pub use error::CloudDatastoreError;
-use gcp_auth::{Token, TokenProvider};
+use gcp_auth::TokenProvider;
 use google::datastore::v1::{
     commit_request::{Mode as CommitMode, TransactionSelector},
     datastore_client::DatastoreClient,
@@ -22,18 +22,11 @@ use google::datastore::v1::{
     RunQueryRequest, RunQueryResponse, TransactionOptions, Value,
 };
 
-use tonic::{
-    metadata::{AsciiMetadataValue, MetadataValue},
-    service::{interceptor::InterceptedService, Interceptor},
-    transport::{Channel, ClientTlsConfig},
-    Request, Status,
-};
+use tonic::transport::{Channel, ClientTlsConfig};
+use tower::ServiceBuilder;
 use tracing::debug;
 
-const AUTH_SCOPE: &[&str] = &["https://www.googleapis.com/auth/cloud-platform"];
 const HTTP_ENDPOINT: &str = "https://datastore.googleapis.com";
-const HEADER_AUTHORIZATION: &str = "authorization";
-const HEADER_REQUEST_PARAMS: &str = "x-goog-request-params";
 
 pub mod google {
     #[path = ""]
@@ -99,77 +92,14 @@ pub trait Kind {
     fn kind() -> &'static str;
 }
 
-#[derive(Clone)]
-struct RequestInterceptor {
-    request_params: String,
-    token_provider: Arc<dyn TokenProvider>,
-}
-
-impl RequestInterceptor {
-    pub fn new(
-        project_id: &str,
-        database_id: Option<&str>,
-        token_provider: Arc<dyn TokenProvider>,
-    ) -> Self {
-        let request_params = match database_id {
-            Some(database_id) => format!("project_id={}&database_id={}", project_id, database_id),
-            None => format!("project_id={}", project_id),
-        };
-
-        RequestInterceptor {
-            request_params,
-            token_provider,
-        }
-    }
-}
-
-impl Interceptor for RequestInterceptor {
-    // The `call` method is called for each request. We use it inject a bearer token into the request
-    // metadata. Since the `call` method is synchronous, use `futures::executor::block_on` to run.
-    fn call(&mut self, mut request: Request<()>) -> Result<Request<()>, Status> {
-        // Retrieve a token from the token provider, using the async runtime.
-        let token: Result<Arc<Token>, Status> = futures::executor::block_on(async {
-            let token = self
-                .token_provider
-                .token(AUTH_SCOPE)
-                .await
-                .map_err(|e| Status::internal(format!("Failed to get token: {}", e)))?;
-            Ok(token)
-        });
-
-        // Propagate any errors that occurred while retrieving the token.
-        let token = token?;
-
-        // Transform the token into a request metadata value.
-        let bearer_token = format!("Bearer {}", token.as_str());
-        let header_value: MetadataValue<_> = bearer_token
-            .parse()
-            .map_err(|_| Status::internal("Failed to parse token".to_string()))?;
-
-        // Insert the token into the request metadata.
-        request
-            .metadata_mut()
-            .insert(HEADER_AUTHORIZATION, header_value);
-
-        // Insert the project_id and database_id into the request metadata.
-        let header_value = AsciiMetadataValue::from_str(&self.request_params)
-            .map_err(|_| Status::internal("Failed to request params".to_string()))?;
-        request
-            .metadata_mut()
-            .insert(HEADER_REQUEST_PARAMS, header_value);
-
-        Ok(request)
-    }
-}
-
 ///
 /// Wrapper around the Datastore API.
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Datastore {
     project_id: String,
     database_id: String,
-    service: DatastoreClient<InterceptedService<Channel, RequestInterceptor>>,
+    service: DatastoreClient<AuthInterceptor<Channel>>,
 }
 
 impl Datastore {
@@ -188,10 +118,18 @@ impl Datastore {
             .connect()
             .await?;
 
-        let interceptor =
-            RequestInterceptor::new(&project_id, database_id.as_deref(), token_provider);
+        let auth_svc = ServiceBuilder::new()
+            .layer_fn(|c| {
+                AuthInterceptor::new(
+                    c,
+                    &project_id,
+                    database_id.as_deref(),
+                    token_provider.clone(),
+                )
+            })
+            .service(channel);
 
-        let service = DatastoreClient::with_interceptor(channel, interceptor);
+        let service = DatastoreClient::new(auth_svc);
 
         let datastore = Datastore {
             project_id,
