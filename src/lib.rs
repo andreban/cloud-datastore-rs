@@ -355,6 +355,14 @@ impl EntityBuilder {
         self.opt_value(name, value.map(Into::into), indexed)
     }
 
+    pub fn add_bool<T: Into<String>>(self, name: T, value: bool, indexed: bool) -> Self {
+        self.add_value(name, ValueType::BooleanValue(value), indexed)
+    }
+
+    pub fn opt_bool<T: Into<String>>(self, name: T, value: Option<bool>, indexed: bool) -> Self {
+        self.opt_value(name, value.map(ValueType::BooleanValue), indexed)
+    }
+
     #[cfg(feature = "time")]
     pub fn add_offset_date_time<T: Into<String>>(
         self,
@@ -456,6 +464,23 @@ impl Entity {
             None => Ok(None),
             _ => Err(EntityValueError(format!("Field {name} is not a string"))),
         }
+    }
+
+    pub fn opt_bool(&self, name: &str) -> Result<Option<bool>, EntityValueError> {
+        match self.properties.get(name) {
+            Some(Value {
+                meaning: _,
+                exclude_from_indexes: _,
+                value_type: Some(ValueType::BooleanValue(value)),
+            }) => Ok(Some(*value)),
+            None => Ok(None),
+            _ => Err(EntityValueError(format!("Field {name} is not a boolean"))),
+        }
+    }
+
+    pub fn req_bool(&self, name: &str) -> Result<bool, EntityValueError> {
+        self.opt_bool(name)
+            .and_then(|v| v.ok_or(EntityValueError("missing required field".to_string())))
     }
 
     #[cfg(feature = "time")]
