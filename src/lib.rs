@@ -210,6 +210,37 @@ impl Datastore {
     }
 
     ///
+    /// Delete entities.
+    ///
+    pub async fn delete_entities(
+        &mut self,
+        keys: Vec<impl Into<Key>>,
+    ) -> Result<(), CloudDatastoreError> {
+        let mutations: Vec<Mutation> = keys
+            .into_iter()
+            .map(|k| Mutation {
+                operation: Some(Operation::Delete(k.into())),
+                ..Default::default()
+            })
+            .collect();
+
+        let request = CommitRequest {
+            project_id: self.project_id.clone(),
+            database_id: self.database_id.clone(), // use empty string '' to refer the default database.
+            mode: CommitMode::Transactional as i32,
+            transaction_selector: Some(TransactionSelector::SingleUseTransaction(
+                TransactionOptions {
+                    mode: Some(TransactionMode::ReadWrite(Default::default())),
+                },
+            )),
+            mutations,
+        };
+
+        self.service.commit(request).await?;
+        Ok(())
+    }
+
+    ///
     /// Load an entity.
     ///
     pub async fn lookup_entity<T: TryFromEntity>(
