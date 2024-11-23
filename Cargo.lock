@@ -1249,20 +1249,11 @@ dependencies = [
 
 [[package]]
 name = "rustls-native-certs"
-<<<<<<< HEAD
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcaf18a4f2be7326cd874a5fa579fae794320a0f388d365dca7e480e55f83f8a"
-dependencies = [
- "openssl-probe",
- "rustls-pemfile",
-=======
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcff2dd52b58a8d98a70243663a0d234c4e2b79235637849d15913394a247d3"
 dependencies = [
  "openssl-probe",
->>>>>>> 2c242ea (Chore: Update generated code and dependencies)
  "rustls-pki-types",
  "schannel",
  "security-framework",
