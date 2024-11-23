@@ -19,7 +19,6 @@
 /// not match the context project ID ) are discouraged.
 /// Reads and writes of foreign partition IDs may fail if the project is not in
 /// an active state.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PartitionId {
     /// The ID of the project to which the entities belong.
@@ -37,7 +36,6 @@ pub struct PartitionId {
 /// If a key's partition ID or any of its path kinds or names are
 /// reserved/read-only, the key is reserved/read-only.
 /// A reserved/read-only key is forbidden in certain documented contexts.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Key {
     /// Entities are partitioned into subsets, currently identified by a project
@@ -70,7 +68,6 @@ pub mod key {
     ///
     /// If either name or ID is set, the element is complete.
     /// If neither is set, the element is incomplete.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct PathElement {
         /// The kind of the entity.
@@ -91,7 +88,6 @@ pub mod key {
     /// Nested message and enum types in `PathElement`.
     pub mod path_element {
         /// The type of ID.
-        #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         pub enum IdType {
             /// The auto-allocated ID of the entity.
@@ -115,7 +111,6 @@ pub mod key {
     }
 }
 /// An array value.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ArrayValue {
     /// Values in the array.
@@ -126,7 +121,6 @@ pub struct ArrayValue {
 }
 /// A message that can hold any of the supported value types and associated
 /// metadata.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Value {
     /// The `meaning` field should only be populated for backwards compatibility.
@@ -143,7 +137,6 @@ pub struct Value {
 /// Nested message and enum types in `Value`.
 pub mod value {
     /// Must have a value set.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum ValueType {
         /// A null value.
@@ -198,7 +191,6 @@ pub mod value {
 /// A Datastore data object.
 ///
 /// Must not exceed 1 MiB - 4 bytes.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Entity {
     /// The entity's key.
@@ -219,7 +211,6 @@ pub struct Entity {
     pub properties: ::std::collections::HashMap<::prost::alloc::string::String, Value>,
 }
 /// The result of fetching an entity from Datastore.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EntityResult {
     /// The resulting entity.
@@ -289,10 +280,10 @@ pub mod entity_result {
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                ResultType::Unspecified => "RESULT_TYPE_UNSPECIFIED",
-                ResultType::Full => "FULL",
-                ResultType::Projection => "PROJECTION",
-                ResultType::KeyOnly => "KEY_ONLY",
+                Self::Unspecified => "RESULT_TYPE_UNSPECIFIED",
+                Self::Full => "FULL",
+                Self::Projection => "PROJECTION",
+                Self::KeyOnly => "KEY_ONLY",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -308,7 +299,15 @@ pub mod entity_result {
     }
 }
 /// A query for entities.
-#[allow(clippy::derive_partial_eq_without_eq)]
+///
+/// The query stages are executed in the following order:
+/// 1. kind
+/// 2. filter
+/// 3. projection
+/// 4. order + start_cursor + end_cursor
+/// 5. offset
+/// 6. limit
+/// 7. find_nearest
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Query {
     /// The projection to return. Defaults to returning all properties.
@@ -356,10 +355,16 @@ pub struct Query {
     /// Must be >= 0 if specified.
     #[prost(message, optional, tag = "12")]
     pub limit: ::core::option::Option<i32>,
+    /// Optional. A potential Nearest Neighbors Search.
+    ///
+    /// Applies after all other filters and ordering.
+    ///
+    /// Finds the closest vector embeddings to the given query vector.
+    #[prost(message, optional, tag = "13")]
+    pub find_nearest: ::core::option::Option<FindNearest>,
 }
 /// Datastore query for running an aggregation over a
 /// [Query][google.datastore.v1.Query].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AggregationQuery {
     /// Optional. Series of aggregations to apply over the results of the
@@ -377,7 +382,6 @@ pub struct AggregationQuery {
 /// Nested message and enum types in `AggregationQuery`.
 pub mod aggregation_query {
     /// Defines an aggregation that produces a single result.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct Aggregation {
         /// Optional. Optional name of the property to store the result of the
@@ -427,7 +431,6 @@ pub mod aggregation_query {
         ///
         /// The `COUNT(*)` aggregation function operates on the entire entity
         /// so it does not require a field reference.
-        #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, Copy, PartialEq, ::prost::Message)]
         pub struct Count {
             /// Optional. Optional constraint on the maximum number of entities to
@@ -474,7 +477,6 @@ pub mod aggregation_query {
         /// the underlying values could produce slightly different results each
         /// time. In those cases, values should be stored as integers over
         /// floating-point numbers.
-        #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         pub struct Sum {
             /// The property to aggregate on.
@@ -492,7 +494,6 @@ pub mod aggregation_query {
         /// * If the aggregated value set is empty, returns `NULL`.
         ///
         /// * Always returns the result as a double.
-        #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         pub struct Avg {
             /// The property to aggregate on.
@@ -500,7 +501,6 @@ pub mod aggregation_query {
             pub property: ::core::option::Option<super::super::PropertyReference>,
         }
         /// The type of aggregation to perform, required.
-        #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         pub enum Operator {
             /// Count aggregator.
@@ -515,7 +515,6 @@ pub mod aggregation_query {
         }
     }
     /// The base query to aggregate over.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum QueryType {
         /// Nested query for aggregation
@@ -524,7 +523,6 @@ pub mod aggregation_query {
     }
 }
 /// A representation of a kind.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KindExpression {
     /// The name of the kind.
@@ -532,7 +530,6 @@ pub struct KindExpression {
     pub name: ::prost::alloc::string::String,
 }
 /// A reference to a property relative to the kind expressions.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PropertyReference {
     /// A reference to a property.
@@ -546,7 +543,6 @@ pub struct PropertyReference {
     pub name: ::prost::alloc::string::String,
 }
 /// A representation of a property in a projection.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Projection {
     /// The property to project.
@@ -554,7 +550,6 @@ pub struct Projection {
     pub property: ::core::option::Option<PropertyReference>,
 }
 /// The desired order for a specific property.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PropertyOrder {
     /// The property to order by.
@@ -594,9 +589,9 @@ pub mod property_order {
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                Direction::Unspecified => "DIRECTION_UNSPECIFIED",
-                Direction::Ascending => "ASCENDING",
-                Direction::Descending => "DESCENDING",
+                Self::Unspecified => "DIRECTION_UNSPECIFIED",
+                Self::Ascending => "ASCENDING",
+                Self::Descending => "DESCENDING",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -611,7 +606,6 @@ pub mod property_order {
     }
 }
 /// A holder for any type of filter.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Filter {
     /// The type of filter.
@@ -621,7 +615,6 @@ pub struct Filter {
 /// Nested message and enum types in `Filter`.
 pub mod filter {
     /// The type of filter.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum FilterType {
         /// A composite filter.
@@ -633,7 +626,6 @@ pub mod filter {
     }
 }
 /// A filter that merges multiple other filters using the given operator.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompositeFilter {
     /// The operator for combining multiple filters.
@@ -677,9 +669,9 @@ pub mod composite_filter {
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                Operator::Unspecified => "OPERATOR_UNSPECIFIED",
-                Operator::And => "AND",
-                Operator::Or => "OR",
+                Self::Unspecified => "OPERATOR_UNSPECIFIED",
+                Self::And => "AND",
+                Self::Or => "OR",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -694,7 +686,6 @@ pub mod composite_filter {
     }
 }
 /// A filter on a specific property.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PropertyFilter {
     /// The property to filter by.
@@ -789,16 +780,16 @@ pub mod property_filter {
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                Operator::Unspecified => "OPERATOR_UNSPECIFIED",
-                Operator::LessThan => "LESS_THAN",
-                Operator::LessThanOrEqual => "LESS_THAN_OR_EQUAL",
-                Operator::GreaterThan => "GREATER_THAN",
-                Operator::GreaterThanOrEqual => "GREATER_THAN_OR_EQUAL",
-                Operator::Equal => "EQUAL",
-                Operator::In => "IN",
-                Operator::NotEqual => "NOT_EQUAL",
-                Operator::HasAncestor => "HAS_ANCESTOR",
-                Operator::NotIn => "NOT_IN",
+                Self::Unspecified => "OPERATOR_UNSPECIFIED",
+                Self::LessThan => "LESS_THAN",
+                Self::LessThanOrEqual => "LESS_THAN_OR_EQUAL",
+                Self::GreaterThan => "GREATER_THAN",
+                Self::GreaterThanOrEqual => "GREATER_THAN_OR_EQUAL",
+                Self::Equal => "EQUAL",
+                Self::In => "IN",
+                Self::NotEqual => "NOT_EQUAL",
+                Self::HasAncestor => "HAS_ANCESTOR",
+                Self::NotIn => "NOT_IN",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -819,9 +810,106 @@ pub mod property_filter {
         }
     }
 }
+/// Nearest Neighbors search config. The ordering provided by FindNearest
+/// supersedes the order_by stage. If multiple documents have the same vector
+/// distance, the returned document order is not guaranteed to be stable between
+/// queries.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FindNearest {
+    /// Required. An indexed vector property to search upon. Only documents which
+    /// contain vectors whose dimensionality match the query_vector can be
+    /// returned.
+    #[prost(message, optional, tag = "1")]
+    pub vector_property: ::core::option::Option<PropertyReference>,
+    /// Required. The query vector that we are searching on. Must be a vector of no
+    /// more than 2048 dimensions.
+    #[prost(message, optional, tag = "2")]
+    pub query_vector: ::core::option::Option<Value>,
+    /// Required. The Distance Measure to use, required.
+    #[prost(enumeration = "find_nearest::DistanceMeasure", tag = "3")]
+    pub distance_measure: i32,
+    /// Required. The number of nearest neighbors to return. Must be a positive
+    /// integer of no more than 100.
+    #[prost(message, optional, tag = "4")]
+    pub limit: ::core::option::Option<i32>,
+    /// Optional. Optional name of the field to output the result of the vector
+    /// distance calculation. Must conform to [entity
+    /// property][google.datastore.v1.Entity.properties] limitations.
+    #[prost(string, tag = "5")]
+    pub distance_result_property: ::prost::alloc::string::String,
+    /// Optional. Option to specify a threshold for which no less similar documents
+    /// will be returned. The behavior of the specified `distance_measure` will
+    /// affect the meaning of the distance threshold. Since DOT_PRODUCT distances
+    /// increase when the vectors are more similar, the comparison is inverted.
+    ///
+    /// For EUCLIDEAN, COSINE: WHERE distance <= distance_threshold
+    /// For DOT_PRODUCT:       WHERE distance >= distance_threshold
+    #[prost(message, optional, tag = "6")]
+    pub distance_threshold: ::core::option::Option<f64>,
+}
+/// Nested message and enum types in `FindNearest`.
+pub mod find_nearest {
+    /// The distance measure to use when comparing vectors.
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum DistanceMeasure {
+        /// Should not be set.
+        Unspecified = 0,
+        /// Measures the EUCLIDEAN distance between the vectors. See
+        /// [Euclidean](<https://en.wikipedia.org/wiki/Euclidean_distance>) to learn
+        /// more. The resulting distance decreases the more similar two vectors are.
+        Euclidean = 1,
+        /// COSINE distance compares vectors based on the angle between them, which
+        /// allows you to measure similarity that isn't based on the vectors
+        /// magnitude. We recommend using DOT_PRODUCT with unit normalized vectors
+        /// instead of COSINE distance, which is mathematically equivalent with
+        /// better performance. See [Cosine
+        /// Similarity](<https://en.wikipedia.org/wiki/Cosine_similarity>) to learn
+        /// more about COSINE similarity and COSINE distance. The resulting COSINE
+        /// distance decreases the more similar two vectors are.
+        Cosine = 2,
+        /// Similar to cosine but is affected by the magnitude of the vectors. See
+        /// [Dot Product](<https://en.wikipedia.org/wiki/Dot_product>) to learn more.
+        /// The resulting distance increases the more similar two vectors are.
+        DotProduct = 3,
+    }
+    impl DistanceMeasure {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unspecified => "DISTANCE_MEASURE_UNSPECIFIED",
+                Self::Euclidean => "EUCLIDEAN",
+                Self::Cosine => "COSINE",
+                Self::DotProduct => "DOT_PRODUCT",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "DISTANCE_MEASURE_UNSPECIFIED" => Some(Self::Unspecified),
+                "EUCLIDEAN" => Some(Self::Euclidean),
+                "COSINE" => Some(Self::Cosine),
+                "DOT_PRODUCT" => Some(Self::DotProduct),
+                _ => None,
+            }
+        }
+    }
+}
 /// A [GQL
 /// query](<https://cloud.google.com/datastore/docs/apis/gql/gql_reference>).
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GqlQuery {
     /// A string of the format described
@@ -853,7 +941,6 @@ pub struct GqlQuery {
     pub positional_bindings: ::prost::alloc::vec::Vec<GqlQueryParameter>,
 }
 /// A binding parameter for a GQL query.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GqlQueryParameter {
     /// The type of parameter.
@@ -863,7 +950,6 @@ pub struct GqlQueryParameter {
 /// Nested message and enum types in `GqlQueryParameter`.
 pub mod gql_query_parameter {
     /// The type of parameter.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum ParameterType {
         /// A value parameter.
@@ -876,7 +962,6 @@ pub mod gql_query_parameter {
     }
 }
 /// A batch of results produced by a query.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryResultBatch {
     /// The number of results skipped, typically because of an offset.
@@ -957,11 +1042,11 @@ pub mod query_result_batch {
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                MoreResultsType::Unspecified => "MORE_RESULTS_TYPE_UNSPECIFIED",
-                MoreResultsType::NotFinished => "NOT_FINISHED",
-                MoreResultsType::MoreResultsAfterLimit => "MORE_RESULTS_AFTER_LIMIT",
-                MoreResultsType::MoreResultsAfterCursor => "MORE_RESULTS_AFTER_CURSOR",
-                MoreResultsType::NoMoreResults => "NO_MORE_RESULTS",
+                Self::Unspecified => "MORE_RESULTS_TYPE_UNSPECIFIED",
+                Self::NotFinished => "NOT_FINISHED",
+                Self::MoreResultsAfterLimit => "MORE_RESULTS_AFTER_LIMIT",
+                Self::MoreResultsAfterCursor => "MORE_RESULTS_AFTER_CURSOR",
+                Self::NoMoreResults => "NO_MORE_RESULTS",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -982,7 +1067,6 @@ pub mod query_result_batch {
 /// The keys of `aggregate_properties` are the same for all results in an
 /// aggregation query, unlike entity queries which can have different fields
 /// present for each result.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AggregationResult {
     /// The result of the aggregation functions, ex: `COUNT(*) AS total_entities`.
@@ -998,7 +1082,6 @@ pub struct AggregationResult {
     >,
 }
 /// A batch of aggregation results produced by an aggregation query.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AggregationResultBatch {
     /// The aggregation results for this batch.
@@ -1018,7 +1101,6 @@ pub struct AggregationResultBatch {
     pub read_time: ::core::option::Option<::prost_types::Timestamp>,
 }
 /// Explain options for the query.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct ExplainOptions {
     /// Optional. Whether to execute this query.
@@ -1032,7 +1114,6 @@ pub struct ExplainOptions {
     pub analyze: bool,
 }
 /// Explain metrics for the query.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExplainMetrics {
     /// Planning phase information for the query.
@@ -1045,7 +1126,6 @@ pub struct ExplainMetrics {
     pub execution_stats: ::core::option::Option<ExecutionStats>,
 }
 /// Planning phase information for the query.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PlanSummary {
     /// The indexes selected for the query. For example:
@@ -1057,7 +1137,6 @@ pub struct PlanSummary {
     pub indexes_used: ::prost::alloc::vec::Vec<::prost_types::Struct>,
 }
 /// Execution statistics for the query.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExecutionStats {
     /// Total number of results returned, including documents, projections,
@@ -1086,7 +1165,6 @@ pub struct ExecutionStats {
     pub debug_stats: ::core::option::Option<::prost_types::Struct>,
 }
 /// The request for [Datastore.Lookup][google.datastore.v1.Datastore.Lookup].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LookupRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1114,7 +1192,6 @@ pub struct LookupRequest {
     pub property_mask: ::core::option::Option<PropertyMask>,
 }
 /// The response for [Datastore.Lookup][google.datastore.v1.Datastore.Lookup].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LookupResponse {
     /// Entities found as `ResultType.FULL` entities. The order of results in this
@@ -1146,7 +1223,6 @@ pub struct LookupResponse {
     pub read_time: ::core::option::Option<::prost_types::Timestamp>,
 }
 /// The request for [Datastore.RunQuery][google.datastore.v1.Datastore.RunQuery].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RunQueryRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1185,7 +1261,6 @@ pub struct RunQueryRequest {
 /// Nested message and enum types in `RunQueryRequest`.
 pub mod run_query_request {
     /// The type of query.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum QueryType {
         /// The query to run.
@@ -1198,7 +1273,6 @@ pub mod run_query_request {
 }
 /// The response for
 /// [Datastore.RunQuery][google.datastore.v1.Datastore.RunQuery].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RunQueryResponse {
     /// A batch of query results (always present).
@@ -1224,7 +1298,6 @@ pub struct RunQueryResponse {
 }
 /// The request for
 /// [Datastore.RunAggregationQuery][google.datastore.v1.Datastore.RunAggregationQuery].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RunAggregationQueryRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1256,7 +1329,6 @@ pub struct RunAggregationQueryRequest {
 /// Nested message and enum types in `RunAggregationQueryRequest`.
 pub mod run_aggregation_query_request {
     /// The type of query.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum QueryType {
         /// The query to run.
@@ -1269,7 +1341,6 @@ pub mod run_aggregation_query_request {
 }
 /// The response for
 /// [Datastore.RunAggregationQuery][google.datastore.v1.Datastore.RunAggregationQuery].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RunAggregationQueryResponse {
     /// A batch of aggregation results. Always present.
@@ -1295,7 +1366,6 @@ pub struct RunAggregationQueryResponse {
 }
 /// The request for
 /// [Datastore.BeginTransaction][google.datastore.v1.Datastore.BeginTransaction].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BeginTransactionRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1313,7 +1383,6 @@ pub struct BeginTransactionRequest {
 }
 /// The response for
 /// [Datastore.BeginTransaction][google.datastore.v1.Datastore.BeginTransaction].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BeginTransactionResponse {
     /// The transaction identifier (always present).
@@ -1321,7 +1390,6 @@ pub struct BeginTransactionResponse {
     pub transaction: ::prost::alloc::vec::Vec<u8>,
 }
 /// The request for [Datastore.Rollback][google.datastore.v1.Datastore.Rollback].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RollbackRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1341,11 +1409,9 @@ pub struct RollbackRequest {
 /// The response for
 /// [Datastore.Rollback][google.datastore.v1.Datastore.Rollback]. (an empty
 /// message).
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct RollbackResponse {}
 /// The request for [Datastore.Commit][google.datastore.v1.Datastore.Commit].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CommitRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1413,9 +1479,9 @@ pub mod commit_request {
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                Mode::Unspecified => "MODE_UNSPECIFIED",
-                Mode::Transactional => "TRANSACTIONAL",
-                Mode::NonTransactional => "NON_TRANSACTIONAL",
+                Self::Unspecified => "MODE_UNSPECIFIED",
+                Self::Transactional => "TRANSACTIONAL",
+                Self::NonTransactional => "NON_TRANSACTIONAL",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1429,7 +1495,6 @@ pub mod commit_request {
         }
     }
     /// Must be set when mode is `TRANSACTIONAL`.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum TransactionSelector {
         /// The identifier of the transaction associated with the commit. A
@@ -1446,7 +1511,6 @@ pub mod commit_request {
     }
 }
 /// The response for [Datastore.Commit][google.datastore.v1.Datastore.Commit].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CommitResponse {
     /// The result of performing the mutations.
@@ -1463,7 +1527,6 @@ pub struct CommitResponse {
 }
 /// The request for
 /// [Datastore.AllocateIds][google.datastore.v1.Datastore.AllocateIds].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AllocateIdsRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1482,7 +1545,6 @@ pub struct AllocateIdsRequest {
 }
 /// The response for
 /// [Datastore.AllocateIds][google.datastore.v1.Datastore.AllocateIds].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AllocateIdsResponse {
     /// The keys specified in the request (in the same order), each with
@@ -1492,7 +1554,6 @@ pub struct AllocateIdsResponse {
 }
 /// The request for
 /// [Datastore.ReserveIds][google.datastore.v1.Datastore.ReserveIds].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReserveIdsRequest {
     /// Required. The ID of the project against which to make the request.
@@ -1511,13 +1572,16 @@ pub struct ReserveIdsRequest {
 }
 /// The response for
 /// [Datastore.ReserveIds][google.datastore.v1.Datastore.ReserveIds].
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct ReserveIdsResponse {}
 /// A mutation to apply to an entity.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Mutation {
+    /// The strategy to use when a conflict is detected. Defaults to
+    /// `SERVER_VALUE`.
+    /// If this is set, then `conflict_detection_strategy` must also be set.
+    #[prost(enumeration = "mutation::ConflictResolutionStrategy", tag = "10")]
+    pub conflict_resolution_strategy: i32,
     /// The properties to write in this mutation.
     /// None of the properties in the mask may have a reserved name, except for
     /// `__key__`.
@@ -1528,6 +1592,13 @@ pub struct Mutation {
     /// Properties referenced in the mask but not in the entity are deleted.
     #[prost(message, optional, tag = "9")]
     pub property_mask: ::core::option::Option<PropertyMask>,
+    /// Optional. The transforms to perform on the entity.
+    ///
+    /// This field can be set only when the operation is `insert`, `update`,
+    /// or `upsert`. If present, the transforms are be applied to the entity
+    /// regardless of the property mask, in order, after the operation.
+    #[prost(message, repeated, tag = "12")]
+    pub property_transforms: ::prost::alloc::vec::Vec<PropertyTransform>,
     /// The mutation operation.
     ///
     /// For `insert`, `update`, and `upsert`:
@@ -1548,6 +1619,49 @@ pub struct Mutation {
 }
 /// Nested message and enum types in `Mutation`.
 pub mod mutation {
+    /// The possible ways to resolve a conflict detected in a mutation.
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum ConflictResolutionStrategy {
+        /// Unspecified. Defaults to `SERVER_VALUE`.
+        StrategyUnspecified = 0,
+        /// The server entity is kept.
+        ServerValue = 1,
+        /// The whole commit request fails.
+        Fail = 3,
+    }
+    impl ConflictResolutionStrategy {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::StrategyUnspecified => "STRATEGY_UNSPECIFIED",
+                Self::ServerValue => "SERVER_VALUE",
+                Self::Fail => "FAIL",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "STRATEGY_UNSPECIFIED" => Some(Self::StrategyUnspecified),
+                "SERVER_VALUE" => Some(Self::ServerValue),
+                "FAIL" => Some(Self::Fail),
+                _ => None,
+            }
+        }
+    }
     /// The mutation operation.
     ///
     /// For `insert`, `update`, and `upsert`:
@@ -1556,7 +1670,6 @@ pub mod mutation {
     ///    not even a property in an entity in a value.
     /// - No value in the entity may have meaning 18,
     ///    not even a value in an entity in another value.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Operation {
         /// The entity to insert. The entity must not already exist.
@@ -1579,7 +1692,6 @@ pub mod mutation {
     /// When set, the server will detect whether or not this mutation conflicts
     /// with the current version of the entity on the server. Conflicting mutations
     /// are not applied, and are marked as such in MutationResult.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, Copy, PartialEq, ::prost::Oneof)]
     pub enum ConflictDetectionStrategy {
         /// The version of the entity that this mutation is being applied
@@ -1594,8 +1706,143 @@ pub mod mutation {
         UpdateTime(::prost_types::Timestamp),
     }
 }
+/// A transformation of an entity property.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PropertyTransform {
+    /// Optional. The name of the property.
+    ///
+    /// Property paths (a list of property names separated by dots (`.`)) may be
+    /// used to refer to properties inside entity values. For example `foo.bar`
+    /// means the property `bar` inside the entity property `foo`.
+    ///
+    /// If a property name contains a dot `.` or a backlslash `\`, then that name
+    /// must be escaped.
+    #[prost(string, tag = "1")]
+    pub property: ::prost::alloc::string::String,
+    /// The transformation to apply to the property.
+    #[prost(oneof = "property_transform::TransformType", tags = "2, 3, 4, 5, 6, 7")]
+    pub transform_type: ::core::option::Option<property_transform::TransformType>,
+}
+/// Nested message and enum types in `PropertyTransform`.
+pub mod property_transform {
+    /// A value that is calculated by the server.
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum ServerValue {
+        /// Unspecified. This value must not be used.
+        Unspecified = 0,
+        /// The time at which the server processed the request, with millisecond
+        /// precision. If used on multiple properties (same or different entities)
+        /// in a transaction, all the properties will get the same server timestamp.
+        RequestTime = 1,
+    }
+    impl ServerValue {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unspecified => "SERVER_VALUE_UNSPECIFIED",
+                Self::RequestTime => "REQUEST_TIME",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "SERVER_VALUE_UNSPECIFIED" => Some(Self::Unspecified),
+                "REQUEST_TIME" => Some(Self::RequestTime),
+                _ => None,
+            }
+        }
+    }
+    /// The transformation to apply to the property.
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum TransformType {
+        /// Sets the property to the given server value.
+        #[prost(enumeration = "ServerValue", tag = "2")]
+        SetToServerValue(i32),
+        /// Adds the given value to the property's current value.
+        ///
+        /// This must be an integer or a double value.
+        /// If the property is not an integer or double, or if the property does not
+        /// yet exist, the transformation will set the property to the given value.
+        /// If either of the given value or the current property value are doubles,
+        /// both values will be interpreted as doubles. Double arithmetic and
+        /// representation of double values follows IEEE 754 semantics.
+        /// If there is positive/negative integer overflow, the property is resolved
+        /// to the largest magnitude positive/negative integer.
+        #[prost(message, tag = "3")]
+        Increment(super::Value),
+        /// Sets the property to the maximum of its current value and the given
+        /// value.
+        ///
+        /// This must be an integer or a double value.
+        /// If the property is not an integer or double, or if the property does not
+        /// yet exist, the transformation will set the property to the given value.
+        /// If a maximum operation is applied where the property and the input value
+        /// are of mixed types (that is - one is an integer and one is a double)
+        /// the property takes on the type of the larger operand. If the operands are
+        /// equivalent (e.g. 3 and 3.0), the property does not change.
+        /// 0, 0.0, and -0.0 are all zero. The maximum of a zero stored value and
+        /// zero input value is always the stored value.
+        /// The maximum of any numeric value x and NaN is NaN.
+        #[prost(message, tag = "4")]
+        Maximum(super::Value),
+        /// Sets the property to the minimum of its current value and the given
+        /// value.
+        ///
+        /// This must be an integer or a double value.
+        /// If the property is not an integer or double, or if the property does not
+        /// yet exist, the transformation will set the property to the input value.
+        /// If a minimum operation is applied where the property and the input value
+        /// are of mixed types (that is - one is an integer and one is a double)
+        /// the property takes on the type of the smaller operand. If the operands
+        /// are equivalent (e.g. 3 and 3.0), the property does not change. 0, 0.0,
+        /// and -0.0 are all zero. The minimum of a zero stored value and zero input
+        /// value is always the stored value. The minimum of any numeric value x and
+        /// NaN is NaN.
+        #[prost(message, tag = "5")]
+        Minimum(super::Value),
+        /// Appends the given elements in order if they are not already present in
+        /// the current property value.
+        /// If the property is not an array, or if the property does not yet exist,
+        /// it is first set to the empty array.
+        ///
+        /// Equivalent numbers of different types (e.g. 3L and 3.0) are
+        /// considered equal when checking if a value is missing.
+        /// NaN is equal to NaN, and the null value is equal to the null value.
+        /// If the input contains multiple equivalent values, only the first will
+        /// be considered.
+        ///
+        /// The corresponding transform result will be the null value.
+        #[prost(message, tag = "6")]
+        AppendMissingElements(super::ArrayValue),
+        /// Removes all of the given elements from the array in the property.
+        /// If the property is not an array, or if the property does not yet exist,
+        /// it is set to the empty array.
+        ///
+        /// Equivalent numbers of different types (e.g. 3L and 3.0) are
+        /// considered equal when deciding whether an element should be removed.
+        /// NaN is equal to NaN, and the null value is equal to the null value.
+        /// This will remove all equivalent values if there are duplicates.
+        ///
+        /// The corresponding transform result will be the null value.
+        #[prost(message, tag = "7")]
+        RemoveAllFromArray(super::ArrayValue),
+    }
+}
 /// The result of applying a mutation.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MutationResult {
     /// The automatically allocated key.
@@ -1622,10 +1869,14 @@ pub struct MutationResult {
     /// conflict detection strategy field is not set in the mutation.
     #[prost(bool, tag = "5")]
     pub conflict_detected: bool,
+    /// The results of applying each
+    /// [PropertyTransform][google.datastore.v1.PropertyTransform], in the same
+    /// order of the request.
+    #[prost(message, repeated, tag = "8")]
+    pub transform_results: ::prost::alloc::vec::Vec<Value>,
 }
 /// The set of arbitrarily nested property paths used to restrict an operation to
 /// only a subset of properties in an entity.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PropertyMask {
     /// The paths to the properties covered by this mask.
@@ -1643,19 +1894,15 @@ pub struct PropertyMask {
     pub paths: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// The options shared by read requests.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReadOptions {
-    /// For Cloud Datastore, if read_consistency is not specified, then lookups and
-    /// ancestor queries default to `read_consistency`=`STRONG`, global queries
-    /// default to `read_consistency`=`EVENTUAL`.
-    ///
-    /// For Cloud Firestore in Datastore mode, if read_consistency is not specified
-    /// then lookups and all queries default to `read_consistency`=`STRONG`.
+    /// For Cloud Firestore in Datastore mode, if you don't specify
+    /// read_consistency then all lookups and queries default to
+    /// `read_consistency`=`STRONG`. Note that, in Cloud Datastore, global queries
+    /// defaulted to `read_consistency`=`EVENTUAL`.
     ///
     /// Explicitly setting `read_consistency`=`EVENTUAL` will result in eventually
-    /// consistent lookups & queries in both Cloud Datastore & Cloud Firestore in
-    /// Datastore mode.
+    /// consistent lookups and queries.
     #[prost(oneof = "read_options::ConsistencyType", tags = "1, 2, 3, 4")]
     pub consistency_type: ::core::option::Option<read_options::ConsistencyType>,
 }
@@ -1689,9 +1936,9 @@ pub mod read_options {
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                ReadConsistency::Unspecified => "READ_CONSISTENCY_UNSPECIFIED",
-                ReadConsistency::Strong => "STRONG",
-                ReadConsistency::Eventual => "EVENTUAL",
+                Self::Unspecified => "READ_CONSISTENCY_UNSPECIFIED",
+                Self::Strong => "STRONG",
+                Self::Eventual => "EVENTUAL",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1704,17 +1951,13 @@ pub mod read_options {
             }
         }
     }
-    /// For Cloud Datastore, if read_consistency is not specified, then lookups and
-    /// ancestor queries default to `read_consistency`=`STRONG`, global queries
-    /// default to `read_consistency`=`EVENTUAL`.
-    ///
-    /// For Cloud Firestore in Datastore mode, if read_consistency is not specified
-    /// then lookups and all queries default to `read_consistency`=`STRONG`.
+    /// For Cloud Firestore in Datastore mode, if you don't specify
+    /// read_consistency then all lookups and queries default to
+    /// `read_consistency`=`STRONG`. Note that, in Cloud Datastore, global queries
+    /// defaulted to `read_consistency`=`EVENTUAL`.
     ///
     /// Explicitly setting `read_consistency`=`EVENTUAL` will result in eventually
-    /// consistent lookups & queries in both Cloud Datastore & Cloud Firestore in
-    /// Datastore mode.
-    #[allow(clippy::derive_partial_eq_without_eq)]
+    /// consistent lookups and queries.
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum ConsistencyType {
         /// The non-transactional read consistency to use.
@@ -1751,7 +1994,6 @@ pub mod read_options {
 /// or implicitly by setting
 /// [ReadOptions.new_transaction][google.datastore.v1.ReadOptions.new_transaction]
 /// in read requests.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionOptions {
     /// The `mode` of the transaction, indicating whether write operations are
@@ -1762,7 +2004,6 @@ pub struct TransactionOptions {
 /// Nested message and enum types in `TransactionOptions`.
 pub mod transaction_options {
     /// Options specific to read / write transactions.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct ReadWrite {
         /// The transaction identifier of the transaction being retried.
@@ -1770,7 +2011,6 @@ pub mod transaction_options {
         pub previous_transaction: ::prost::alloc::vec::Vec<u8>,
     }
     /// Options specific to read-only transactions.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, Copy, PartialEq, ::prost::Message)]
     pub struct ReadOnly {
         /// Reads entities at the given time.
@@ -1783,7 +2023,6 @@ pub mod transaction_options {
     }
     /// The `mode` of the transaction, indicating whether write operations are
     /// supported.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Mode {
         /// The transaction should allow both reads and writes.
@@ -1796,7 +2035,13 @@ pub mod transaction_options {
 }
 /// Generated client implementations.
 pub mod datastore_client {
-    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
     /// Each RPC normalizes the partition IDs of the keys in its input entities,
@@ -1825,8 +2070,8 @@ pub mod datastore_client {
     where
         T: tonic::client::GrpcService<tonic::body::BoxBody>,
         T::Error: Into<StdError>,
-        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
-        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
     {
         pub fn new(inner: T) -> Self {
             let inner = tonic::client::Grpc::new(inner);
@@ -1851,7 +2096,7 @@ pub mod datastore_client {
             >,
             <T as tonic::codegen::Service<
                 http::Request<tonic::body::BoxBody>,
-            >>::Error: Into<StdError> + Send + Sync,
+            >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
         {
             DatastoreClient::new(InterceptedService::new(inner, interceptor))
         }
@@ -1895,8 +2140,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
@@ -1921,8 +2165,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
@@ -1947,8 +2190,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
@@ -1978,8 +2220,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
@@ -2004,8 +2245,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
@@ -2030,8 +2270,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
@@ -2057,8 +2296,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;
@@ -2084,8 +2322,7 @@ pub mod datastore_client {
                 .ready()
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
+                    tonic::Status::unknown(
                         format!("Service was not ready: {}", e.into()),
                     )
                 })?;

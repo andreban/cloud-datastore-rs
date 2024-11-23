@@ -4,7 +4,6 @@
 /// specified otherwise, this must conform to the
 /// <a href="<http://www.unoosa.org/pdf/icg/2012/template/WGS_84.pdf">WGS84>
 /// standard</a>. Values must be within normalized ranges.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct LatLng {
     /// The latitude in degrees. It must be in the range \[-90.0, +90.0\].

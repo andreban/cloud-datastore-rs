@@ -2,7 +2,6 @@
 /// Defines the HTTP configuration for an API service. It contains a list of
 /// [HttpRule][google.api.HttpRule], each specifying the mapping of an RPC method
 /// to one or more HTTP REST API methods.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Http {
     /// A list of HTTP configuration rules that apply to individual API methods.
@@ -283,7 +282,6 @@ pub struct Http {
 /// If an API needs to use a JSON array for request or response body, it can map
 /// the request or response body to a repeated field. However, some gRPC
 /// Transcoding implementations may not support this feature.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HttpRule {
     /// Selects a method to which this rule applies.
@@ -324,7 +322,6 @@ pub mod http_rule {
     /// Determines the URL pattern is matched by this rules. This pattern can be
     /// used with any of the {get|put|post|delete|patch} methods. A custom method
     /// can be defined using the 'custom' field.
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Pattern {
         /// Maps to HTTP GET. Used for listing and getting information about
@@ -352,7 +349,6 @@ pub mod http_rule {
     }
 }
 /// A custom pattern is used for defining custom HTTP verb.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CustomHttpPattern {
     /// The name of this custom HTTP verb.
@@ -412,14 +408,14 @@ impl LaunchStage {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            LaunchStage::Unspecified => "LAUNCH_STAGE_UNSPECIFIED",
-            LaunchStage::Unimplemented => "UNIMPLEMENTED",
-            LaunchStage::Prelaunch => "PRELAUNCH",
-            LaunchStage::EarlyAccess => "EARLY_ACCESS",
-            LaunchStage::Alpha => "ALPHA",
-            LaunchStage::Beta => "BETA",
-            LaunchStage::Ga => "GA",
-            LaunchStage::Deprecated => "DEPRECATED",
+            Self::Unspecified => "LAUNCH_STAGE_UNSPECIFIED",
+            Self::Unimplemented => "UNIMPLEMENTED",
+            Self::Prelaunch => "PRELAUNCH",
+            Self::EarlyAccess => "EARLY_ACCESS",
+            Self::Alpha => "ALPHA",
+            Self::Beta => "BETA",
+            Self::Ga => "GA",
+            Self::Deprecated => "DEPRECATED",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -438,7 +434,6 @@ impl LaunchStage {
     }
 }
 /// Required information for every language.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CommonLanguageSettings {
     /// Link to automatically generated reference documentation.  Example:
@@ -449,9 +444,11 @@ pub struct CommonLanguageSettings {
     /// The destination where API teams want this client library to be published.
     #[prost(enumeration = "ClientLibraryDestination", repeated, tag = "2")]
     pub destinations: ::prost::alloc::vec::Vec<i32>,
+    /// Configuration for which RPCs should be generated in the GAPIC client.
+    #[prost(message, optional, tag = "3")]
+    pub selective_gapic_generation: ::core::option::Option<SelectiveGapicGeneration>,
 }
 /// Details about how and where to publish client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClientLibrarySettings {
     /// Version of the API to apply these settings to. This is the full protobuf
@@ -494,7 +491,6 @@ pub struct ClientLibrarySettings {
 /// This message configures the settings for publishing [Google Cloud Client
 /// libraries](<https://cloud.google.com/apis/docs/cloud-client-libraries>)
 /// generated from the service config.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Publishing {
     /// A list of API method settings, e.g. the behavior for methods that use the
@@ -543,7 +539,6 @@ pub struct Publishing {
     pub rest_reference_documentation_uri: ::prost::alloc::string::String,
 }
 /// Settings for Java client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct JavaSettings {
     /// The package name to use in Java. Clobbers the java_package option
@@ -583,7 +578,6 @@ pub struct JavaSettings {
     pub common: ::core::option::Option<CommonLanguageSettings>,
 }
 /// Settings for C++ client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CppSettings {
     /// Some settings.
@@ -591,7 +585,6 @@ pub struct CppSettings {
     pub common: ::core::option::Option<CommonLanguageSettings>,
 }
 /// Settings for Php client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PhpSettings {
     /// Some settings.
@@ -599,15 +592,39 @@ pub struct PhpSettings {
     pub common: ::core::option::Option<CommonLanguageSettings>,
 }
 /// Settings for Python client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PythonSettings {
     /// Some settings.
     #[prost(message, optional, tag = "1")]
     pub common: ::core::option::Option<CommonLanguageSettings>,
+    /// Experimental features to be included during client library generation.
+    #[prost(message, optional, tag = "2")]
+    pub experimental_features: ::core::option::Option<
+        python_settings::ExperimentalFeatures,
+    >,
+}
+/// Nested message and enum types in `PythonSettings`.
+pub mod python_settings {
+    /// Experimental features to be included during client library generation.
+    /// These fields will be deprecated once the feature graduates and is enabled
+    /// by default.
+    #[derive(Clone, Copy, PartialEq, ::prost::Message)]
+    pub struct ExperimentalFeatures {
+        /// Enables generation of asynchronous REST clients if `rest` transport is
+        /// enabled. By default, asynchronous REST clients will not be generated.
+        /// This feature will be enabled by default 1 month after launching the
+        /// feature in preview packages.
+        #[prost(bool, tag = "1")]
+        pub rest_async_io_enabled: bool,
+        /// Enables generation of protobuf code using new types that are more
+        /// Pythonic which are included in `protobuf>=5.29.x`. This feature will be
+        /// enabled by default 1 month after launching the feature in preview
+        /// packages.
+        #[prost(bool, tag = "2")]
+        pub protobuf_pythonic_types_enabled: bool,
+    }
 }
 /// Settings for Node client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NodeSettings {
     /// Some settings.
@@ -615,7 +632,6 @@ pub struct NodeSettings {
     pub common: ::core::option::Option<CommonLanguageSettings>,
 }
 /// Settings for Dotnet client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DotnetSettings {
     /// Some settings.
@@ -661,7 +677,6 @@ pub struct DotnetSettings {
     pub handwritten_signatures: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Settings for Ruby client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RubySettings {
     /// Some settings.
@@ -669,7 +684,6 @@ pub struct RubySettings {
     pub common: ::core::option::Option<CommonLanguageSettings>,
 }
 /// Settings for Go client libraries.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GoSettings {
     /// Some settings.
@@ -677,7 +691,6 @@ pub struct GoSettings {
     pub common: ::core::option::Option<CommonLanguageSettings>,
 }
 /// Describes the generator configuration for a method.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MethodSettings {
     /// The fully qualified name of the method, for which the options below apply.
@@ -728,7 +741,6 @@ pub mod method_settings {
     /// All default values below are from those used in the client library
     /// generators (e.g.
     /// [Java](<https://github.com/googleapis/gapic-generator-java/blob/04c2faa191a9b5a10b92392fe8482279c4404803/src/main/java/com/google/api/generator/gapic/composer/common/RetrySettingsComposer.java>)).
-    #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, Copy, PartialEq, ::prost::Message)]
     pub struct LongRunning {
         /// Initial delay after which the first poll request will be made.
@@ -749,6 +761,15 @@ pub mod method_settings {
         #[prost(message, optional, tag = "4")]
         pub total_poll_timeout: ::core::option::Option<::prost_types::Duration>,
     }
+}
+/// This message is used to configure the generation of a subset of the RPCs in
+/// a service for client libraries.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SelectiveGapicGeneration {
+    /// An allowlist of the fully qualified names of RPCs that should be included
+    /// on public client surfaces.
+    #[prost(string, repeated, tag = "1")]
+    pub methods: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// The organization for which the client libraries are being published.
 /// Affects the url where generated docs are published, etc.
@@ -779,16 +800,14 @@ impl ClientLibraryOrganization {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            ClientLibraryOrganization::Unspecified => {
-                "CLIENT_LIBRARY_ORGANIZATION_UNSPECIFIED"
-            }
-            ClientLibraryOrganization::Cloud => "CLOUD",
-            ClientLibraryOrganization::Ads => "ADS",
-            ClientLibraryOrganization::Photos => "PHOTOS",
-            ClientLibraryOrganization::StreetView => "STREET_VIEW",
-            ClientLibraryOrganization::Shopping => "SHOPPING",
-            ClientLibraryOrganization::Geo => "GEO",
-            ClientLibraryOrganization::GenerativeAi => "GENERATIVE_AI",
+            Self::Unspecified => "CLIENT_LIBRARY_ORGANIZATION_UNSPECIFIED",
+            Self::Cloud => "CLOUD",
+            Self::Ads => "ADS",
+            Self::Photos => "PHOTOS",
+            Self::StreetView => "STREET_VIEW",
+            Self::Shopping => "SHOPPING",
+            Self::Geo => "GEO",
+            Self::GenerativeAi => "GENERATIVE_AI",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -826,11 +845,9 @@ impl ClientLibraryDestination {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            ClientLibraryDestination::Unspecified => {
-                "CLIENT_LIBRARY_DESTINATION_UNSPECIFIED"
-            }
-            ClientLibraryDestination::Github => "GITHUB",
-            ClientLibraryDestination::PackageManager => "PACKAGE_MANAGER",
+            Self::Unspecified => "CLIENT_LIBRARY_DESTINATION_UNSPECIFIED",
+            Self::Github => "GITHUB",
+            Self::PackageManager => "PACKAGE_MANAGER",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -906,15 +923,15 @@ impl FieldBehavior {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            FieldBehavior::Unspecified => "FIELD_BEHAVIOR_UNSPECIFIED",
-            FieldBehavior::Optional => "OPTIONAL",
-            FieldBehavior::Required => "REQUIRED",
-            FieldBehavior::OutputOnly => "OUTPUT_ONLY",
-            FieldBehavior::InputOnly => "INPUT_ONLY",
-            FieldBehavior::Immutable => "IMMUTABLE",
-            FieldBehavior::UnorderedList => "UNORDERED_LIST",
-            FieldBehavior::NonEmptyDefault => "NON_EMPTY_DEFAULT",
-            FieldBehavior::Identifier => "IDENTIFIER",
+            Self::Unspecified => "FIELD_BEHAVIOR_UNSPECIFIED",
+            Self::Optional => "OPTIONAL",
+            Self::Required => "REQUIRED",
+            Self::OutputOnly => "OUTPUT_ONLY",
+            Self::InputOnly => "INPUT_ONLY",
+            Self::Immutable => "IMMUTABLE",
+            Self::UnorderedList => "UNORDERED_LIST",
+            Self::NonEmptyDefault => "NON_EMPTY_DEFAULT",
+            Self::Identifier => "IDENTIFIER",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1292,7 +1309,6 @@ impl FieldBehavior {
 ///
 ///      x-goog-request-params:
 ///      table_location=instances/instance_bar&routing_id=prof_qux
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RoutingRule {
     /// A collection of Routing Parameter specifications.
@@ -1305,7 +1321,6 @@ pub struct RoutingRule {
     pub routing_parameters: ::prost::alloc::vec::Vec<RoutingParameter>,
 }
 /// A projection from an input message to the GRPC or REST header.
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RoutingParameter {
     /// A request field to extract the header key-value pair from.
