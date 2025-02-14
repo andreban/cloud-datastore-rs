@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 futures = "^0.3"
 gcp_auth = "^0.12"
-http = "^1.1"
+http = "^1.2"
 prost = "^0.13"
 prost-types = "^0.13"
 time = { version = "^0.3", optional = true }
